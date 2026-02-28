@@ -46,4 +46,9 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<String?> getSavedRole() {
     return localDataSource.getSavedRole();
   }
+
+  @override
+  Future<String?> getAccessToken() {
+    return localDataSource.getAccessToken();
+  }
 }

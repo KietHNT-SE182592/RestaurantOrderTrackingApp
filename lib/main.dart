@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/constants/app_colors.dart';
 import 'di/injection.dart';
-import 'features/auth/domain/usecases/get_saved_role_usecase.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
 import 'routes/app_router.dart';
 
@@ -13,26 +12,28 @@ void main() async {
   // Khởi tạo toàn bộ dependency graph
   await initDependencies();
 
-  // Lấy role đã lưu thông qua UseCase (không còn phụ thuộc thẳng vào Data)
-  final savedRole = await sl<GetSavedRoleUseCase>()();
+  // Lấy singleton AuthCubit đã được wire bởi GetIt
+  final authCubit = sl<AuthCubit>();
 
-  runApp(RestaurantApp(initialRole: savedRole));
+  // Decode JWT đã lưu để khôi phục session (không cần gọi API)
+  await authCubit.checkAuthStatus();
+
+  runApp(RestaurantApp(authCubit: authCubit));
 }
 
 class RestaurantApp extends StatelessWidget {
-  final String? initialRole;
+  final AuthCubit authCubit;
 
-  const RestaurantApp({super.key, this.initialRole});
+  const RestaurantApp({super.key, required this.authCubit});
 
   @override
   Widget build(BuildContext context) {
-    final router = AppRouter.createRouter(initialRole);
+    // Router nhận cùng singleton authCubit để refreshListenable hoạt động đúng
+    final router = AppRouter.createRouter(authCubit);
 
-    return MultiBlocProvider(
-      providers: [
-        // sl<AuthCubit>() dùng registerFactory nên mỗi lần là instance mới
-        BlocProvider(create: (_) => sl<AuthCubit>()),
-      ],
+    return BlocProvider.value(
+      // .value — không tạo mới, dùng instance đã tồn tại từ GetIt
+      value: authCubit,
       child: MaterialApp.router(
         title: 'Restaurant Order Tracking',
         routerConfig: router,

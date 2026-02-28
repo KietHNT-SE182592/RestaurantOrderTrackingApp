@@ -16,6 +16,9 @@ abstract class AuthLocalDataSource {
 
   /// Lấy role đã lưu. Trả về null nếu chưa đăng nhập.
   Future<String?> getSavedRole();
+
+  /// Lấy access token đã lưu (dùng decode JWT khi cold start).
+  Future<String?> getAccessToken();
 }
 
 class AuthLocalDataSourceImpl implements AuthLocalDataSource {
@@ -56,5 +59,10 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   @override
   Future<String?> getSavedRole() async {
     return prefs.getString(_keyUserRole);
+  }
+
+  @override
+  Future<String?> getAccessToken() async {
+    return prefs.getString(_keyAccessToken);
   }
 }

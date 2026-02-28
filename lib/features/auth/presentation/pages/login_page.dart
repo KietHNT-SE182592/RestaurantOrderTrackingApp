@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../cubit/auth_cubit.dart';
 
@@ -14,12 +13,8 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
-  final TextEditingController _userController = TextEditingController(
-    text: "admin",
-  );
-  final TextEditingController _passController = TextEditingController(
-    text: "admin123",
-  );
+  final TextEditingController _userController = TextEditingController();
+  final TextEditingController _passController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = false;
   late final AnimationController _floatController;
@@ -68,25 +63,8 @@ class _LoginPageState extends State<LoginPage>
       body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Đăng nhập thành công!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            switch (state.user.role) {
-              case 'Admin':
-                context.go('/admin');
-                break;
-              case 'Staff':
-                context.go('/pos');
-                break;
-              case 'Chef':
-                context.go('/kds');
-                break;
-              default:
-                context.go('/login');
-            }
+            // GoRouter.redirect tự động điều hướng theo role khi AuthSuccess emit.
+            // LoginPage không cần gọi context.go() thủ công.
           } else if (state is AuthFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

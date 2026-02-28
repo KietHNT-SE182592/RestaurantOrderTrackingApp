@@ -12,4 +12,7 @@ abstract class AuthRepository {
 
   /// Lấy role đã lưu để Router điều hướng khi mở lại app.
   Future<String?> getSavedRole();
+
+  /// Lấy access token đã lưu (dùng để decode JWT khi cold start).
+  Future<String?> getAccessToken();
 }

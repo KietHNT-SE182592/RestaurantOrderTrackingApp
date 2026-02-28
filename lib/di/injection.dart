@@ -7,6 +7,7 @@ import '../features/auth/data/datasources/auth_local_datasource.dart';
 import '../features/auth/data/datasources/auth_remote_datasource.dart';
 import '../features/auth/data/repositories/auth_repository_impl.dart';
 import '../features/auth/domain/repositories/auth_repository.dart';
+import '../features/auth/domain/usecases/check_auth_status_usecase.dart';
 import '../features/auth/domain/usecases/get_saved_role_usecase.dart';
 import '../features/auth/domain/usecases/login_usecase.dart';
 import '../features/auth/domain/usecases/logout_usecase.dart';
@@ -32,7 +33,7 @@ Future<void> initDependencies() async {
     () => AuthLocalDataSourceImpl(prefs: sl<SharedPreferences>()),
   );
 
-  // ─── Auth: Repository (đăng ký dưới interface, không phải concrete) ──────────
+  // ─── Auth: Repository (dưới interface, không phải concrete) ──────────────────
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(
       remoteDataSource: sl<AuthRemoteDataSource>(),
@@ -44,12 +45,16 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => LoginUseCase(sl<AuthRepository>()));
   sl.registerLazySingleton(() => LogoutUseCase(sl<AuthRepository>()));
   sl.registerLazySingleton(() => GetSavedRoleUseCase(sl<AuthRepository>()));
+  sl.registerLazySingleton(() => CheckAuthStatusUseCase(sl<AuthRepository>()));
 
-  // ─── Auth: Cubit (registerFactory vì mỗi lần tạo màn hình cần instance mới) ─
-  sl.registerFactory(
+  // ─── Auth: Cubit — Singleton (không phải Factory) ────────────────────────────
+  // Phải là singleton vì AppRouter dùng cùng instance với BlocProvider.
+  sl.registerLazySingleton(
     () => AuthCubit(
       loginUseCase: sl<LoginUseCase>(),
       logoutUseCase: sl<LogoutUseCase>(),
+      checkAuthStatusUseCase: sl<CheckAuthStatusUseCase>(),
     ),
   );
 }
+
