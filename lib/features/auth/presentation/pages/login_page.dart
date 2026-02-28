@@ -2,6 +2,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/shared_features/widgets/app_text_field.dart';
+import '../../../../core/shared_features/widgets/dot_pattern_background.dart';
+import '../../../../core/shared_features/widgets/form_field_label.dart';
 import '../cubit/auth_cubit.dart';
 
 class LoginPage extends StatefulWidget {
@@ -77,16 +80,7 @@ class _LoginPageState extends State<LoginPage>
         child: Stack(
           children: [
             // Dot pattern background
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _DotPatternPainter(
-                  color: isDark
-                      ? const Color(0xFF44403C)
-                      : const Color(0xFFFDBA74),
-                  opacity: isDark ? 0.10 : 0.20,
-                ),
-              ),
-            ),
+            const DotPatternBackground(),
             // Decorative blobs
             Positioned(
               top: -40,
@@ -252,27 +246,29 @@ class _LoginPageState extends State<LoginPage>
                               const SizedBox(height: 24),
 
                               // Username field
-                              _FieldLabel(text: 'Tài khoản', color: labelColor),
+                              FormFieldLabel(text: 'Tài khoản', color: labelColor),
                               const SizedBox(height: 4),
-                              _InputField(
+                              AppTextField(
                                 controller: _userController,
                                 hintText: 'Nhập tên đăng nhập',
                                 prefixIcon: Icons.person_outline,
                                 inputBg: inputBg,
                                 borderColor: borderColor,
+                                textInputAction: TextInputAction.next,
                               ),
                               const SizedBox(height: 16),
 
                               // Password field
-                              _FieldLabel(text: 'Mật khẩu', color: labelColor),
+                              FormFieldLabel(text: 'Mật khẩu', color: labelColor),
                               const SizedBox(height: 4),
-                              _InputField(
+                              AppTextField(
                                 controller: _passController,
                                 hintText: 'Nhập mật khẩu',
                                 prefixIcon: Icons.lock_outline,
                                 obscureText: _obscurePassword,
                                 inputBg: inputBg,
                                 borderColor: borderColor,
+                                textInputAction: TextInputAction.done,
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword
@@ -473,73 +469,7 @@ class _LoginPageState extends State<LoginPage>
   }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel({required this.text, required this.color});
-  final String text;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(left: 4),
-    child: Text(
-      text,
-      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color),
-    ),
-  );
-}
-
-class _InputField extends StatelessWidget {
-  const _InputField({
-    required this.controller,
-    required this.hintText,
-    required this.prefixIcon,
-    required this.inputBg,
-    required this.borderColor,
-    this.obscureText = false,
-    this.suffixIcon,
-  });
-
-  final TextEditingController controller;
-  final String hintText;
-  final IconData prefixIcon;
-  final Color inputBg;
-  final Color borderColor;
-  final bool obscureText;
-  final Widget? suffixIcon;
-
-  @override
-  Widget build(BuildContext context) => TextField(
-    controller: controller,
-    obscureText: obscureText,
-    style: const TextStyle(fontSize: 14),
-    decoration: InputDecoration(
-      hintText: hintText,
-      hintStyle: const TextStyle(
-        color: AppColors.mutedForeground,
-        fontSize: 14,
-      ),
-      filled: true,
-      fillColor: inputBg,
-      contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-      prefixIcon: Icon(prefixIcon, color: AppColors.mutedForeground, size: 20),
-      suffixIcon: suffixIcon,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: borderColor),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: borderColor),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-      ),
-    ),
-  );
-}
+// ─── Helpers (Login-specific) ──────────────────────────────────────────────────
 
 class _SocialButton extends StatelessWidget {
   const _SocialButton({
@@ -626,26 +556,4 @@ class _FacebookIcon extends StatelessWidget {
       const Icon(Icons.facebook, color: Color(0xFF1877F2), size: 20);
 }
 
-// Dot pattern painter
-class _DotPatternPainter extends CustomPainter {
-  const _DotPatternPainter({required this.color, required this.opacity});
-  final Color color;
-  final double opacity;
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color.withOpacity(opacity)
-      ..style = PaintingStyle.fill;
-    const spacing = 24.0;
-    const dotRadius = 1.0;
-    for (double x = 0; x < size.width; x += spacing) {
-      for (double y = 0; y < size.height; y += spacing) {
-        canvas.drawCircle(Offset(x, y), dotRadius, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
