@@ -25,6 +25,7 @@ import '../features/manager/presentation/pages/manager_shell_page.dart';
 import '../features/manager/presentation/pages/manager_tables_page.dart';
 import '../features/waiter/presentation/pages/waiter_pos_page.dart';
 import '../features/waiter/presentation/pages/waiter_shell_page.dart';
+import '../features/waiter/presentation/pages/waiter_table_detail_page.dart';
 import '../features/waiter/presentation/pages/waiter_tables_page.dart';
 
 class AppRouter {
@@ -197,6 +198,14 @@ class AppRouter {
           path: AppRoutes.cashierCheckout,
           builder: (context, state) => CashierCheckoutPage(
             orderId: state.pathParameters['orderId'] ?? '',
+          ),
+        ),
+
+        // Waiter — Chi tiết bàn, push từ WaiterTablesPage
+        GoRoute(
+          path: AppRoutes.waiterTableDetail,
+          builder: (context, state) => WaiterTableDetailPage(
+            tableId: state.pathParameters['tableId'] ?? '',
           ),
         ),
       ],

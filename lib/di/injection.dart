@@ -12,6 +12,14 @@ import '../features/auth/domain/usecases/get_saved_role_usecase.dart';
 import '../features/auth/domain/usecases/login_usecase.dart';
 import '../features/auth/domain/usecases/logout_usecase.dart';
 import '../features/auth/presentation/cubit/auth_cubit.dart';
+import '../features/waiter/data/datasources/table_remote_datasource.dart';
+import '../features/waiter/data/repositories/table_repository_impl.dart';
+import '../features/waiter/domain/repositories/table_repository.dart';
+import '../features/waiter/domain/usecases/get_areas_usecase.dart';
+import '../features/waiter/domain/usecases/get_table_detail_usecase.dart';
+import '../features/waiter/domain/usecases/get_tables_usecase.dart';
+import '../features/waiter/presentation/cubit/table_detail_cubit.dart';
+import '../features/waiter/presentation/cubit/table_list_cubit.dart';
 
 /// Service Locator toàn cục.
 final sl = GetIt.instance;
@@ -55,6 +63,32 @@ Future<void> initDependencies() async {
       logoutUseCase: sl<LogoutUseCase>(),
       checkAuthStatusUseCase: sl<CheckAuthStatusUseCase>(),
     ),
+  );
+
+  // ─── Table (Waiter): DataSource ───────────────────────────────────────────────
+  sl.registerLazySingleton<TableRemoteDataSource>(
+    () => TableRemoteDataSourceImpl(dio: sl<Dio>()),
+  );
+
+  // ─── Table (Waiter): Repository ───────────────────────────────────────────────
+  sl.registerLazySingleton<TableRepository>(
+    () => TableRepositoryImpl(remoteDataSource: sl<TableRemoteDataSource>()),
+  );
+
+  // ─── Table (Waiter): UseCases ─────────────────────────────────────────────────
+  sl.registerLazySingleton(() => GetAreasUseCase(sl<TableRepository>()));
+  sl.registerLazySingleton(() => GetTablesUseCase(sl<TableRepository>()));
+  sl.registerLazySingleton(() => GetTableDetailUseCase(sl<TableRepository>()));
+
+  // ─── Table (Waiter): Cubits — Factory (mỗi page tạo instance mới) ─────────────
+  sl.registerFactory(
+    () => TableListCubit(
+      getAreasUseCase: sl<GetAreasUseCase>(),
+      getTablesUseCase: sl<GetTablesUseCase>(),
+    ),
+  );
+  sl.registerFactory(
+    () => TableDetailCubit(getTableDetailUseCase: sl<GetTableDetailUseCase>()),
   );
 }
 

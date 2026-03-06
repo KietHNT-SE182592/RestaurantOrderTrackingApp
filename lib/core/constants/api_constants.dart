@@ -3,5 +3,7 @@ class ApiConstants {
   static const String baseUrl = 'http://localhost:5015/api'; 
   
   // Endpoints
-  static const String login = '/Auth/login';
+  static const String login  = '/Auth/login';
+  static const String areas  = '/Area';
+  static const String tables = '/Table';
 }

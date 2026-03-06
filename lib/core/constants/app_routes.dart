@@ -22,8 +22,13 @@ abstract class AppRoutes {
   static const String kitchenDisplay = '/kitchen/display';
 
   // ─── Waiter ──────────────────────────────────────────────────────────────────
-  static const String waiterPos    = '/waiter/pos';
-  static const String waiterTables = '/waiter/tables';
+  static const String waiterPos         = '/waiter/pos';
+  static const String waiterTables      = '/waiter/tables';
+  static const String waiterTableDetail = '/waiter/tables/:tableId';
+
+  /// Build path chi tiết bàn với tableId cụ thể.
+  static String waiterTableDetailOf(String tableId) =>
+      '/waiter/tables/$tableId';
 
   // ─── Cashier ─────────────────────────────────────────────────────────────────
   static const String cashierOrders   = '/cashier/orders';
