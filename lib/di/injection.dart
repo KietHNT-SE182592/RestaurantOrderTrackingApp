@@ -116,6 +116,7 @@ Future<void> initDependencies() async {
     () => TableDetailCubit(
       getTableDetailUseCase: sl<GetTableDetailUseCase>(),
       createOrderUseCase: sl<CreateOrderUseCase>(),
+      getOrderDetailUseCase: sl<GetOrderDetailUseCase>(),
     ),
   );
   sl.registerFactory(

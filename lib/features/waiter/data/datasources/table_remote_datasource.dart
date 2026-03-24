@@ -187,11 +187,14 @@ class TableRemoteDataSourceImpl implements TableRemoteDataSource {
         invalidFormatMessage: 'Phản hồi tạo đơn không đúng định dạng.',
       );
 
-      final data = BaseResponseDecoder.requireMapData(
-        baseResponse,
-        fallbackErrorMessage: 'Dữ liệu tạo đơn không hợp lệ.',
-      );
-      return data['id'] as String? ?? '';
+      final rawData = baseResponse.data;
+      if (rawData is String) {
+        return rawData;
+      }
+      if (rawData is Map<String, dynamic>) {
+        return rawData['id'] as String? ?? '';
+      }
+      throw ServerException('Dữ liệu tạo đơn không hợp lệ.');
     } on DioException catch (e) {
       throw ServerException(
         BaseResponseDecoder.extractErrorMessage(
