@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/errors/exceptions.dart';
+import '../../../../core/network/api_request_options.dart';
+import '../../../../core/network/base_response_decoder.dart';
 import '../models/user_model.dart';
 
 abstract class AuthRemoteDataSource {
@@ -20,21 +22,34 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       final response = await dio.post(
         ApiConstants.login,
-        data: {
-          'userName': userName,
-          'password': password,
-        },
+        data: {'userName': userName, 'password': password},
+        options: Options(
+          extra: {
+            ApiRequestOptions.showSuccessMessage: false,
+            ApiRequestOptions.showErrorMessage: false,
+          },
+        ),
       );
 
-      if (response.data['succeeded'] == true) {
-        return UserModel.fromJson(response.data['data']);
-      } else {
-        throw ServerException(
-          response.data['message'] ?? 'Đăng nhập thất bại',
-        );
-      }
+      final baseResponse = BaseResponseDecoder.requireSuccess(
+        response.data,
+        fallbackErrorMessage: 'Đăng nhập thất bại',
+        invalidFormatMessage: 'Phản hồi đăng nhập không đúng định dạng.',
+      );
+
+      final data = BaseResponseDecoder.requireMapData(
+        baseResponse,
+        fallbackErrorMessage: 'Dữ liệu đăng nhập không hợp lệ.',
+      );
+
+      return UserModel.fromJson(data);
     } on DioException catch (e) {
-      throw ServerException('Lỗi kết nối máy chủ: ${e.message}');
+      throw ServerException(
+        BaseResponseDecoder.extractErrorMessage(
+          e,
+          fallbackMessage: 'Lỗi kết nối máy chủ.',
+        ),
+      );
     }
   }
 }

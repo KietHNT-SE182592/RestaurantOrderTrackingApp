@@ -65,23 +65,38 @@ class TableListCubit extends Cubit<TableListState> {
   TableListCubit({
     required GetAreasUseCase getAreasUseCase,
     required GetTablesUseCase getTablesUseCase,
-  })  : _getAreasUseCase = getAreasUseCase,
-        _getTablesUseCase = getTablesUseCase,
-        super(TableListInitial());
+  }) : _getAreasUseCase = getAreasUseCase,
+       _getTablesUseCase = getTablesUseCase,
+       super(TableListInitial());
 
   /// Tải danh sách khu vực và bàn cùng lúc.
-  Future<void> loadTablesAndAreas() async {
+  Future<void> loadTablesAndAreas({bool keepSelectedArea = false}) async {
+    final previousState = state;
+    final previousSelectedAreaId =
+        keepSelectedArea && previousState is TableListLoaded
+        ? previousState.selectedAreaId
+        : '';
+
     emit(TableListLoading());
     try {
       final results = await Future.wait([
         _getAreasUseCase(),
         _getTablesUseCase(pageSize: 100),
       ]);
-      emit(TableListLoaded(
-        areas: (results[0] as List).cast<AreaEntity>().toList(),
-        tables: (results[1] as List).cast<TableEntity>().toList(),
-        selectedAreaId: '',
-      ));
+      final loadedAreas = (results[0] as List).cast<AreaEntity>().toList();
+      final loadedTables = (results[1] as List).cast<TableEntity>().toList();
+
+      final hasPreviousArea = loadedAreas.any(
+        (area) => area.id == previousSelectedAreaId,
+      );
+
+      emit(
+        TableListLoaded(
+          areas: loadedAreas,
+          tables: loadedTables,
+          selectedAreaId: hasPreviousArea ? previousSelectedAreaId : '',
+        ),
+      );
     } on ServerFailure catch (e) {
       emit(TableListError(e.message));
     } catch (e) {
@@ -98,5 +113,5 @@ class TableListCubit extends Cubit<TableListState> {
   }
 
   /// Pull-to-refresh.
-  Future<void> refresh() => loadTablesAndAreas();
+  Future<void> refresh() => loadTablesAndAreas(keepSelectedArea: true);
 }

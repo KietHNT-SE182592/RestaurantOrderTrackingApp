@@ -1,3 +1,4 @@
+import '../../../../core/constants/status_enums.dart';
 import '../../domain/entities/table_entity.dart';
 
 class TableModel extends TableEntity {
@@ -13,7 +14,7 @@ class TableModel extends TableEntity {
       id: json['id'] as String? ?? '',
       tableNumber: json['tableNumber'] as String? ?? '',
       areaName: json['areaName'] as String? ?? '',
-      status: json['status'] as String? ?? '',
+      status: TableStatus.fromApi(json['status']),
     );
   }
 }

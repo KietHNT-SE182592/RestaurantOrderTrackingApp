@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/network/api_message_service.dart';
 import '../core/network/dio_client.dart';
 import '../features/auth/data/datasources/auth_local_datasource.dart';
 import '../features/auth/data/datasources/auth_remote_datasource.dart';
@@ -12,14 +13,28 @@ import '../features/auth/domain/usecases/get_saved_role_usecase.dart';
 import '../features/auth/domain/usecases/login_usecase.dart';
 import '../features/auth/domain/usecases/logout_usecase.dart';
 import '../features/auth/presentation/cubit/auth_cubit.dart';
+import '../features/orders/data/datasources/orders_remote_datasource.dart';
+import '../features/orders/data/repositories/orders_repository_impl.dart';
+import '../features/orders/domain/repositories/orders_repository.dart';
+import '../features/orders/domain/usecases/create_order_items_usecase.dart';
+import '../features/orders/domain/usecases/get_categories_usecase.dart';
+import '../features/orders/domain/usecases/get_order_detail_usecase.dart';
+import '../features/orders/domain/usecases/get_products_usecase.dart';
+import '../features/orders/presentation/cubit/order_detail_cubit.dart';
+import '../features/orders/presentation/cubit/order_menu_cubit.dart';
 import '../features/waiter/data/datasources/table_remote_datasource.dart';
 import '../features/waiter/data/repositories/table_repository_impl.dart';
 import '../features/waiter/domain/repositories/table_repository.dart';
+import '../features/waiter/domain/usecases/create_order_usecase.dart';
 import '../features/waiter/domain/usecases/get_areas_usecase.dart';
+import '../features/waiter/domain/usecases/get_order_items_by_status_usecase.dart';
 import '../features/waiter/domain/usecases/get_table_detail_usecase.dart';
 import '../features/waiter/domain/usecases/get_tables_usecase.dart';
+import '../features/waiter/domain/usecases/update_order_items_status_usecase.dart';
 import '../features/waiter/presentation/cubit/table_detail_cubit.dart';
 import '../features/waiter/presentation/cubit/table_list_cubit.dart';
+import '../features/waiter/presentation/cubit/waiter_delivering_cubit.dart';
+import '../features/waiter/presentation/cubit/waiter_serve_cubit.dart';
 
 /// Service Locator toàn cục.
 final sl = GetIt.instance;
@@ -30,7 +45,10 @@ Future<void> initDependencies() async {
   // ─── External ───────────────────────────────────────────────────────────────
   final prefs = await SharedPreferences.getInstance();
   sl.registerLazySingleton<SharedPreferences>(() => prefs);
-  sl.registerLazySingleton<DioClient>(() => DioClient());
+  sl.registerLazySingleton<ApiMessageService>(() => ApiMessageService());
+  sl.registerLazySingleton<DioClient>(
+    () => DioClient(messageService: sl<ApiMessageService>()),
+  );
   sl.registerLazySingleton<Dio>(() => sl<DioClient>().dio);
 
   // ─── Auth: DataSources ───────────────────────────────────────────────────────
@@ -79,6 +97,13 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => GetAreasUseCase(sl<TableRepository>()));
   sl.registerLazySingleton(() => GetTablesUseCase(sl<TableRepository>()));
   sl.registerLazySingleton(() => GetTableDetailUseCase(sl<TableRepository>()));
+  sl.registerLazySingleton(() => CreateOrderUseCase(sl<TableRepository>()));
+  sl.registerLazySingleton(
+    () => GetOrderItemsByStatusUseCase(sl<TableRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => UpdateOrderItemsStatusUseCase(sl<TableRepository>()),
+  );
 
   // ─── Table (Waiter): Cubits — Factory (mỗi page tạo instance mới) ─────────────
   sl.registerFactory(
@@ -88,7 +113,53 @@ Future<void> initDependencies() async {
     ),
   );
   sl.registerFactory(
-    () => TableDetailCubit(getTableDetailUseCase: sl<GetTableDetailUseCase>()),
+    () => TableDetailCubit(
+      getTableDetailUseCase: sl<GetTableDetailUseCase>(),
+      createOrderUseCase: sl<CreateOrderUseCase>(),
+    ),
+  );
+  sl.registerFactory(
+    () => WaiterServeCubit(
+      getAreasUseCase: sl<GetAreasUseCase>(),
+      getOrderItemsByStatusUseCase: sl<GetOrderItemsByStatusUseCase>(),
+      updateOrderItemsStatusUseCase: sl<UpdateOrderItemsStatusUseCase>(),
+    ),
+  );
+  sl.registerFactory(
+    () => WaiterDeliveringCubit(
+      getAreasUseCase: sl<GetAreasUseCase>(),
+      getOrderItemsByStatusUseCase: sl<GetOrderItemsByStatusUseCase>(),
+      updateOrderItemsStatusUseCase: sl<UpdateOrderItemsStatusUseCase>(),
+    ),
+  );
+
+  // ─── Orders: DataSource ─────────────────────────────────────────────────────
+  sl.registerLazySingleton<OrdersRemoteDataSource>(
+    () => OrdersRemoteDataSourceImpl(dio: sl<Dio>()),
+  );
+
+  // ─── Orders: Repository ─────────────────────────────────────────────────────
+  sl.registerLazySingleton<OrdersRepository>(
+    () => OrdersRepositoryImpl(remoteDataSource: sl<OrdersRemoteDataSource>()),
+  );
+
+  // ─── Orders: UseCase ────────────────────────────────────────────────────────
+  sl.registerLazySingleton(() => GetOrderDetailUseCase(sl<OrdersRepository>()));
+  sl.registerLazySingleton(() => GetCategoriesUseCase(sl<OrdersRepository>()));
+  sl.registerLazySingleton(() => GetProductsUseCase(sl<OrdersRepository>()));
+  sl.registerLazySingleton(
+    () => CreateOrderItemsUseCase(sl<OrdersRepository>()),
+  );
+
+  // ─── Orders: Cubit ──────────────────────────────────────────────────────────
+  sl.registerFactory(
+    () => OrderDetailCubit(getOrderDetailUseCase: sl<GetOrderDetailUseCase>()),
+  );
+  sl.registerFactory(
+    () => OrderMenuCubit(
+      getCategoriesUseCase: sl<GetCategoriesUseCase>(),
+      getProductsUseCase: sl<GetProductsUseCase>(),
+      createOrderItemsUseCase: sl<CreateOrderItemsUseCase>(),
+    ),
   );
 }
-

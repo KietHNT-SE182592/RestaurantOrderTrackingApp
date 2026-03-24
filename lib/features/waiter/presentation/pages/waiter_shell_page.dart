@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Shell của Waiter — BottomNavigationBar 2 tabs.
+/// Shell của Waiter — BottomNavigationBar 3 tabs.
 class WaiterShellPage extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
@@ -31,6 +31,11 @@ class WaiterShellPage extends StatelessWidget {
             icon: Icon(Icons.table_restaurant_outlined),
             selectedIcon: Icon(Icons.table_restaurant),
             label: 'Sơ đồ bàn',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.delivery_dining_outlined),
+            selectedIcon: Icon(Icons.delivery_dining),
+            label: 'Ra món',
           ),
         ],
       ),

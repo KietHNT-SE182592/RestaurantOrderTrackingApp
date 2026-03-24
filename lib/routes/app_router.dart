@@ -23,7 +23,13 @@ import '../features/manager/presentation/pages/manager_inventory_page.dart';
 import '../features/manager/presentation/pages/manager_reports_page.dart';
 import '../features/manager/presentation/pages/manager_shell_page.dart';
 import '../features/manager/presentation/pages/manager_tables_page.dart';
+import '../features/orders/presentation/pages/order_detail_page.dart';
+import '../features/orders/presentation/pages/order_menu_page.dart';
+import '../features/waiter/domain/entities/table_detail_entity.dart';
+import '../features/waiter/presentation/pages/waiter_order_item_detail_page.dart';
+import '../features/waiter/presentation/pages/waiter_delivering_page.dart';
 import '../features/waiter/presentation/pages/waiter_pos_page.dart';
+import '../features/waiter/presentation/pages/waiter_serve_page.dart';
 import '../features/waiter/presentation/pages/waiter_shell_page.dart';
 import '../features/waiter/presentation/pages/waiter_table_detail_page.dart';
 import '../features/waiter/presentation/pages/waiter_tables_page.dart';
@@ -88,30 +94,38 @@ class AppRouter {
           builder: (context, state, navigationShell) =>
               AdminShellPage(navigationShell: navigationShell),
           branches: [
-            StatefulShellBranch(routes: [
-              GoRoute(
-                path: AppRoutes.adminDashboard,
-                builder: (context, state) => const AdminDashboardPage(),
-              ),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
-                path: AppRoutes.adminStaff,
-                builder: (context, state) => const AdminStaffPage(),
-              ),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
-                path: AppRoutes.adminMenu,
-                builder: (context, state) => const AdminMenuPage(),
-              ),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
-                path: AppRoutes.adminReports,
-                builder: (context, state) => const AdminReportsPage(),
-              ),
-            ]),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: AppRoutes.adminDashboard,
+                  builder: (context, state) => const AdminDashboardPage(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: AppRoutes.adminStaff,
+                  builder: (context, state) => const AdminStaffPage(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: AppRoutes.adminMenu,
+                  builder: (context, state) => const AdminMenuPage(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: AppRoutes.adminReports,
+                  builder: (context, state) => const AdminReportsPage(),
+                ),
+              ],
+            ),
           ],
         ),
 
@@ -120,37 +134,44 @@ class AppRouter {
           builder: (context, state, navigationShell) =>
               ManagerShellPage(navigationShell: navigationShell),
           branches: [
-            StatefulShellBranch(routes: [
-              GoRoute(
-                path: AppRoutes.managerDashboard,
-                builder: (context, state) => const ManagerDashboardPage(),
-              ),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
-                path: AppRoutes.managerTables,
-                builder: (context, state) => const ManagerTablesPage(),
-              ),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
-                path: AppRoutes.managerInventory,
-                builder: (context, state) => const ManagerInventoryPage(),
-              ),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
-                path: AppRoutes.managerReports,
-                builder: (context, state) => const ManagerReportsPage(),
-              ),
-            ]),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: AppRoutes.managerDashboard,
+                  builder: (context, state) => const ManagerDashboardPage(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: AppRoutes.managerTables,
+                  builder: (context, state) => const ManagerTablesPage(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: AppRoutes.managerInventory,
+                  builder: (context, state) => const ManagerInventoryPage(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: AppRoutes.managerReports,
+                  builder: (context, state) => const ManagerReportsPage(),
+                ),
+              ],
+            ),
           ],
         ),
 
         // ─── Kitchen (Chef) — full screen, không có bottom nav ────────────────
         ShellRoute(
-          builder: (context, state, child) =>
-              KitchenShellPage(child: child),
+          builder: (context, state, child) => KitchenShellPage(child: child),
           routes: [
             GoRoute(
               path: AppRoutes.kitchenDisplay,
@@ -159,23 +180,39 @@ class AppRouter {
           ],
         ),
 
-        // ─── Waiter — 2 tabs ──────────────────────────────────────────────────
+        // ─── Waiter — 3 tabs ──────────────────────────────────────────────────
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) =>
               WaiterShellPage(navigationShell: navigationShell),
           branches: [
-            StatefulShellBranch(routes: [
-              GoRoute(
-                path: AppRoutes.waiterPos,
-                builder: (context, state) => const WaiterPosPage(),
-              ),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
-                path: AppRoutes.waiterTables,
-                builder: (context, state) => const WaiterTablesPage(),
-              ),
-            ]),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: AppRoutes.waiterPos,
+                  builder: (context, state) => const WaiterPosPage(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: AppRoutes.waiterTables,
+                  builder: (context, state) => const WaiterTablesPage(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: AppRoutes.waiterServe,
+                  builder: (context, state) => const WaiterServePage(),
+                ),
+                GoRoute(
+                  path: AppRoutes.waiterDelivering,
+                  builder: (context, state) => const WaiterDeliveringPage(),
+                ),
+              ],
+            ),
           ],
         ),
 
@@ -184,12 +221,14 @@ class AppRouter {
           builder: (context, state, navigationShell) =>
               CashierShellPage(navigationShell: navigationShell),
           branches: [
-            StatefulShellBranch(routes: [
-              GoRoute(
-                path: AppRoutes.cashierOrders,
-                builder: (context, state) => const CashierOrdersPage(),
-              ),
-            ]),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: AppRoutes.cashierOrders,
+                  builder: (context, state) => const CashierOrdersPage(),
+                ),
+              ],
+            ),
           ],
         ),
 
@@ -208,6 +247,22 @@ class AppRouter {
             tableId: state.pathParameters['tableId'] ?? '',
           ),
         ),
+        GoRoute(
+          path: AppRoutes.waiterOrderDetail,
+          builder: (context, state) =>
+              OrderDetailPage(orderId: state.pathParameters['orderId'] ?? ''),
+        ),
+        GoRoute(
+          path: AppRoutes.waiterOrderMenu,
+          builder: (context, state) =>
+              OrderMenuPage(orderId: state.pathParameters['orderId'] ?? ''),
+        ),
+        GoRoute(
+          path: AppRoutes.waiterOrderItemDetail,
+          builder: (context, state) => WaiterOrderItemDetailPage(
+            item: state.extra as TableOrderItemSummaryEntity?,
+          ),
+        ),
       ],
     );
   }
@@ -220,7 +275,9 @@ class AppRouter {
     // Các route shared (profile, notifications) — ai cũng được vào
     if (location.startsWith(AppRoutes.notifications) ||
         location.startsWith(AppRoutes.profile) ||
-        location.startsWith(AppRoutes.cashierCheckout.replaceAll('/:orderId', ''))) {
+        location.startsWith(
+          AppRoutes.cashierCheckout.replaceAll('/:orderId', ''),
+        )) {
       return null;
     }
 
@@ -232,10 +289,10 @@ class AppRouter {
   }
 
   static const Map<String, List<String>> _rolePrefixes = {
-    'Admin':   ['/admin'],
+    'Admin': ['/admin'],
     'Manager': ['/manager'],
-    'Chef':    ['/kitchen'],
-    'Waiter':  ['/waiter'],
+    'Chef': ['/kitchen'],
+    'Waiter': ['/waiter'],
     'Cashier': ['/cashier'],
   };
 }

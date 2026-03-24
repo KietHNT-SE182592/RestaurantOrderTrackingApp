@@ -1,8 +1,10 @@
+import '../../../../core/constants/status_enums.dart';
+
 class TableEntity {
   final String id;
   final String tableNumber;
   final String areaName;
-  final String status;
+  final TableStatus status;
 
   const TableEntity({
     required this.id,
@@ -11,5 +13,11 @@ class TableEntity {
     required this.status,
   });
 
-  bool get isAvailable => status == 'Available';
+  bool get isAvailable => status == TableStatus.available;
+
+  bool get isOccupied => status == TableStatus.occupied;
+
+  bool get isReserved => status == TableStatus.reserved;
+
+  int get statusCode => status.apiCode;
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_routes.dart';
+import '../../../../core/constants/status_enums.dart';
 import '../../../../di/injection.dart';
 import '../../domain/entities/table_entity.dart';
 import '../cubit/table_list_cubit.dart';
@@ -65,20 +66,21 @@ class _WaiterTablesView extends StatelessWidget {
               Text(
                 'Sơ đồ Bàn',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.foregroundLight,
-                    ),
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.foregroundLight,
+                ),
               ),
               BlocBuilder<TableListCubit, TableListState>(
                 builder: (context, state) {
                   if (state is TableListLoaded) {
-                    final available =
-                        state.tables.where((t) => t.isAvailable).length;
+                    final available = state.tables
+                        .where((t) => t.isAvailable)
+                        .length;
                     return Text(
                       '$available / ${state.tables.length} bàn trống',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.mutedForeground,
-                          ),
+                        color: AppColors.mutedForeground,
+                      ),
                     );
                   }
                   return const SizedBox.shrink();
@@ -229,9 +231,9 @@ class _TableGrid extends StatelessWidget {
             final matchedArea = state.selectedAreaId.isEmpty
                 ? null
                 : state.areas
-                    .where((a) => a.id == state.selectedAreaId)
-                    .map((a) => a.name)
-                    .firstOrNull;
+                      .where((a) => a.id == state.selectedAreaId)
+                      .map((a) => a.name)
+                      .firstOrNull;
             return _EmptyView(areaName: matchedArea);
           }
 
@@ -248,8 +250,7 @@ class _TableGrid extends StatelessWidget {
                 childAspectRatio: 1.05,
               ),
               itemCount: tables.length,
-              itemBuilder: (context, index) =>
-                  _TableCard(table: tables[index]),
+              itemBuilder: (context, index) => _TableCard(table: tables[index]),
             ),
           );
         }
@@ -268,38 +269,27 @@ class _TableCard extends StatelessWidget {
 
   Color get _statusColor {
     switch (table.status) {
-      case 'Available':
+      case TableStatus.available:
         return const Color(0xFF22C55E);
-      case 'Occupied':
+      case TableStatus.occupied:
         return const Color(0xFFEF4444);
-      case 'Reserved':
+      case TableStatus.reserved:
         return AppColors.secondary;
       default:
         return AppColors.mutedForeground;
     }
   }
 
-  String get _statusLabel {
-    switch (table.status) {
-      case 'Available':
-        return 'Trống';
-      case 'Occupied':
-        return 'Có khách';
-      case 'Reserved':
-        return 'Đặt trước';
-      default:
-        return table.status;
-    }
-  }
+  String get _statusLabel => table.status.viLabel;
 
   IconData get _statusIcon {
     switch (table.status) {
-      case 'Available':
+      case TableStatus.available:
         return Icons.check_circle_rounded;
-      case 'Occupied':
-        return Icons.people_rounded;
-      case 'Reserved':
+      case TableStatus.occupied:
         return Icons.bookmark_rounded;
+      case TableStatus.reserved:
+        return Icons.people_rounded;
       default:
         return Icons.info_rounded;
     }
@@ -308,7 +298,11 @@ class _TableCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.push(AppRoutes.waiterTableDetailOf(table.id)),
+      onTap: () async {
+        await context.push(AppRoutes.waiterTableDetailOf(table.id));
+        if (!context.mounted) return;
+        await context.read<TableListCubit>().refresh();
+      },
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -352,10 +346,10 @@ class _TableCard extends StatelessWidget {
               Text(
                 table.tableNumber,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.foregroundLight,
-                      height: 1,
-                    ),
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.foregroundLight,
+                  height: 1,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -363,8 +357,8 @@ class _TableCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.mutedForeground,
-                    ),
+                  color: AppColors.mutedForeground,
+                ),
               ),
               const SizedBox(height: 8),
               Container(
@@ -439,9 +433,10 @@ class _SkeletonCardState extends State<_SkeletonCard>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    _animation = Tween(begin: 0.4, end: 0.9).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _animation = Tween(
+      begin: 0.4,
+      end: 0.9,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -495,9 +490,9 @@ class _EmptyView extends StatelessWidget {
                 ? 'Không có bàn trong "$areaName"'
                 : 'Không có bàn nào',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColors.foregroundLight,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColors.foregroundLight,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -538,16 +533,16 @@ class _ErrorView extends StatelessWidget {
             Text(
               'Không thể tải dữ liệu',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.foregroundLight,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: AppColors.foregroundLight,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               message,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.mutedForeground,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
               textAlign: TextAlign.center,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
@@ -560,8 +555,10 @@ class _ErrorView extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

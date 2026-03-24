@@ -8,35 +8,52 @@ abstract class AppRoutes {
 
   // ─── Admin ───────────────────────────────────────────────────────────────────
   static const String adminDashboard = '/admin/dashboard';
-  static const String adminStaff     = '/admin/staff';
-  static const String adminMenu      = '/admin/menu';
-  static const String adminReports   = '/admin/reports';
+  static const String adminStaff = '/admin/staff';
+  static const String adminMenu = '/admin/menu';
+  static const String adminReports = '/admin/reports';
 
   // ─── Manager ─────────────────────────────────────────────────────────────────
-  static const String managerDashboard  = '/manager/dashboard';
-  static const String managerTables     = '/manager/tables';
-  static const String managerInventory  = '/manager/inventory';
-  static const String managerReports    = '/manager/reports';
+  static const String managerDashboard = '/manager/dashboard';
+  static const String managerTables = '/manager/tables';
+  static const String managerInventory = '/manager/inventory';
+  static const String managerReports = '/manager/reports';
 
   // ─── Kitchen (Chef) ──────────────────────────────────────────────────────────
   static const String kitchenDisplay = '/kitchen/display';
 
   // ─── Waiter ──────────────────────────────────────────────────────────────────
-  static const String waiterPos         = '/waiter/pos';
-  static const String waiterTables      = '/waiter/tables';
+  static const String waiterPos = '/waiter/pos';
+  static const String waiterTables = '/waiter/tables';
+  static const String waiterServe = '/waiter/serve';
+  static const String waiterDelivering = '/waiter/delivering';
   static const String waiterTableDetail = '/waiter/tables/:tableId';
+  static const String waiterOrderDetail = '/waiter/orders/:orderId';
+  static const String waiterOrderMenu = '/waiter/orders/:orderId/menu';
+  static const String waiterOrderItemDetail =
+      '/waiter/orders/:orderId/items/:orderItemId';
 
   /// Build path chi tiết bàn với tableId cụ thể.
   static String waiterTableDetailOf(String tableId) =>
       '/waiter/tables/$tableId';
 
+  static String waiterOrderDetailOf(String orderId) =>
+      '/waiter/orders/$orderId';
+
+  static String waiterOrderMenuOf(String orderId) =>
+      '/waiter/orders/$orderId/menu';
+
+  static String waiterOrderItemDetailOf(String orderId, String orderItemId) =>
+      '/waiter/orders/$orderId/items/$orderItemId';
+
+  static String waiterDeliveringOf() => waiterDelivering;
+
   // ─── Cashier ─────────────────────────────────────────────────────────────────
-  static const String cashierOrders   = '/cashier/orders';
+  static const String cashierOrders = '/cashier/orders';
   static const String cashierCheckout = '/cashier/checkout/:orderId';
 
   // ─── Shared (accessible từ mọi role) ─────────────────────────────────────────
   static const String notifications = '/notifications';
-  static const String profile       = '/profile';
+  static const String profile = '/profile';
 
   // ─── Helper ──────────────────────────────────────────────────────────────────
 
