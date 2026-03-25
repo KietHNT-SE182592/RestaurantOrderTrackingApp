@@ -634,15 +634,7 @@ class _OrderItemsSectionState extends State<_OrderItemsSection> {
   late _OrderItemFilterOption _selectedFilter;
 
   static const List<_OrderItemFilterOption> _filterOptions = [
-    _OrderItemFilterOption(
-      label: 'Sẵn sàng phục vụ',
-      status: OrderItemStatus.ready,
-    ),
-    _OrderItemFilterOption(
-      label: 'Đang mang ra',
-      status: OrderItemStatus.delivering,
-    ),
-    _OrderItemFilterOption(label: 'Đã phục vụ', status: OrderItemStatus.served),
+    _OrderItemFilterOption(label: 'Tất cả'),
     _OrderItemFilterOption(
       label: 'Chờ xác nhận',
       status: OrderItemStatus.pending,
@@ -652,9 +644,28 @@ class _OrderItemsSectionState extends State<_OrderItemsSection> {
       status: OrderItemStatus.confirmed,
     ),
     _OrderItemFilterOption(label: 'Đang nấu', status: OrderItemStatus.cooking),
+    _OrderItemFilterOption(
+      label: 'Sẵn sàng phục vụ',
+      status: OrderItemStatus.ready,
+    ),
+    _OrderItemFilterOption(
+      label: 'Đang mang ra',
+      status: OrderItemStatus.delivering,
+    ),
+    _OrderItemFilterOption(label: 'Đã phục vụ', status: OrderItemStatus.served),
     _OrderItemFilterOption(label: 'Đã hủy', status: OrderItemStatus.cancelled),
-    _OrderItemFilterOption(label: 'Tất cả'),
   ];
+
+  static const Map<OrderItemStatus, int> _statusSortOrder = {
+    OrderItemStatus.pending: 0,
+    OrderItemStatus.confirmed: 1,
+    OrderItemStatus.cooking: 2,
+    OrderItemStatus.ready: 3,
+    OrderItemStatus.delivering: 4,
+    OrderItemStatus.served: 5,
+    OrderItemStatus.cancelled: 6,
+    OrderItemStatus.unknown: 7,
+  };
 
   @override
   void initState() {
@@ -669,6 +680,16 @@ class _OrderItemsSectionState extends State<_OrderItemsSection> {
       if (selectedStatus == null) return true;
       return item.status == selectedStatus;
     }).toList();
+
+    filteredItems.sort((a, b) {
+      final rankA = _statusSortOrder[a.status] ?? 999;
+      final rankB = _statusSortOrder[b.status] ?? 999;
+      if (rankA != rankB) return rankA.compareTo(rankB);
+
+      final timeA = a.createdAt?.millisecondsSinceEpoch ?? 0;
+      final timeB = b.createdAt?.millisecondsSinceEpoch ?? 0;
+      return timeA.compareTo(timeB);
+    });
 
     final totalQuantity = filteredItems.fold<int>(
       0,
