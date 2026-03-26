@@ -92,8 +92,8 @@ class TableRepositoryImpl implements TableRepository {
   Future<String> updateOrderItemsStatus({
     required List<String> orderItemIds,
     required int newStatus,
-    required String accountId,
-    required String changeSource,
+    String? accountId,
+    String? changeSource,
     String? assigneeId,
   }) async {
     try {

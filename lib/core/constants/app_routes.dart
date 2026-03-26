@@ -64,6 +64,7 @@ abstract class AppRoutes {
       case 'Manager':
         return managerDashboard;
       case 'Chef':
+      case 'HeadChef':
         return kitchenDisplay;
       case 'Waiter':
         return waiterTables;

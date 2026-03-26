@@ -8,8 +8,8 @@ class UpdateOrderItemsStatusUseCase {
   Future<String> call({
     required List<String> orderItemIds,
     required int newStatus,
-    required String accountId,
-    required String changeSource,
+    String? accountId,
+    String? changeSource,
     String? assigneeId,
   }) {
     return repository.updateOrderItemsStatus(

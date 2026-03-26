@@ -283,6 +283,7 @@ class AppRouter {
     'Admin': ['/admin'],
     'Manager': ['/manager'],
     'Chef': ['/kitchen'],
+    'HeadChef': ['/kitchen'],
     'Waiter': ['/waiter'],
     'Cashier': ['/cashier'],
   };

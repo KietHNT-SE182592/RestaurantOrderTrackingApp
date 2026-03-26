@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 class ApiConstants {
   // Ưu tiên nhận từ --dart-define=BASE_URL=...
   // Nếu không có, Android emulator dùng 10.0.2.2 thay vì localhost.
-  static const String _baseUrlFromEnv = "https://gjrl0zn6-7260.asse.devtunnels.ms/api";//String.fromEnvironment('BASE_URL');
+  static const String _baseUrlFromEnv = String.fromEnvironment('BASE_URL');
 
   static String get baseUrl {
     if (_baseUrlFromEnv.isNotEmpty) {
@@ -26,6 +26,7 @@ class ApiConstants {
   static const String orders = '/Order';
   static const String orderItems = '/OrderItem';
   static const String orderItemsUpdateStatus = '/OrderItem/Update-Status';
+  static const String chefsAvailable = '/Chef/available';
   static const String categories = '/Category';
   static const String products = '/Product';
 }

@@ -1,51 +1,549 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// Kitchen Display System (KDS) — màn hình chính của Chef.
-/// Hiển thị danh sách order đang chờ xử lý theo thời gian thực.
+import '../../../../core/constants/app_colors.dart';
+import '../../../../di/injection.dart';
+import '../../../chef/domain/entities/chef_member_entity.dart';
+import '../../../waiter/domain/entities/serve_item_entity.dart';
+import '../cubit/head_chef_board_cubit.dart';
+
+enum _ChefPopupFilter { all, asian, european }
+
 class KitchenDisplayPage extends StatelessWidget {
   const KitchenDisplayPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => sl<HeadChefBoardCubit>()..load(),
+      child: const _KitchenDisplayView(),
+    );
+  }
+}
+
+class _KitchenDisplayView extends StatelessWidget {
+  const _KitchenDisplayView();
+
+  String _specialtyLabel(ChefMemberEntity chef) {
+    if (chef.isAsianSpecialty) return 'Chuyên món Á';
+    if (chef.isEuropeanSpecialty) return 'Chuyên món Âu';
+    return 'Đa năng';
+  }
+
+  List<ChefMemberEntity> _filterChefs(
+    List<ChefMemberEntity> chefs,
+    _ChefPopupFilter filter,
+  ) {
+    switch (filter) {
+      case _ChefPopupFilter.asian:
+        return chefs.where((chef) => chef.isAsianSpecialty).toList();
+      case _ChefPopupFilter.european:
+        return chefs.where((chef) => chef.isEuropeanSpecialty).toList();
+      case _ChefPopupFilter.all:
+        return chefs;
+    }
+  }
+
+  Future<void> _assignItem(BuildContext context, String orderItemId) async {
+    try {
+      await context.read<HeadChefBoardCubit>().assignOrderItem(orderItemId);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã phân công và chuyển sang Đang nấu.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Không thể phân công: $e')));
+    }
+  }
+
+  Future<void> _showAssignChefDialog(
+    BuildContext context, {
+    required ServeItemEntity item,
+    required List<ChefMemberEntity> chefs,
+    required String? selectedAssigneeId,
+    required bool isAssigning,
+  }) async {
+    if (isAssigning) return;
+    if (chefs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Hiện chưa có đầu bếp khả dụng.')),
+      );
+      return;
+    }
+
+    final selectedChefId = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        var filter = _ChefPopupFilter.all;
+        var currentSelected = selectedAssigneeId;
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final filteredChefs = _filterChefs(chefs, filter);
+            if (currentSelected != null &&
+                filteredChefs.every(
+                  (chef) => chef.accountId != currentSelected,
+                )) {
+              currentSelected = null;
+            }
+
+            return AlertDialog(
+              title: const Text('Chọn đầu bếp phụ trách'),
+              content: SizedBox(
+                width: 460,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('Tất cả'),
+                          selected: filter == _ChefPopupFilter.all,
+                          onSelected: (_) =>
+                              setState(() => filter = _ChefPopupFilter.all),
+                        ),
+                        ChoiceChip(
+                          label: const Text('Món Á'),
+                          selected: filter == _ChefPopupFilter.asian,
+                          onSelected: (_) =>
+                              setState(() => filter = _ChefPopupFilter.asian),
+                        ),
+                        ChoiceChip(
+                          label: const Text('Món Âu'),
+                          selected: filter == _ChefPopupFilter.european,
+                          onSelected: (_) => setState(
+                            () => filter = _ChefPopupFilter.european,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    if (filteredChefs.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Text(
+                          'Không có đầu bếp phù hợp với bộ lọc đã chọn.',
+                        ),
+                      )
+                    else
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 280),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: filteredChefs.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final chef = filteredChefs[index];
+                            return RadioListTile<String>(
+                              dense: true,
+                              value: chef.accountId,
+                              groupValue: currentSelected,
+                              onChanged: (value) =>
+                                  setState(() => currentSelected = value),
+                              title: Text(chef.fullName),
+                              subtitle: Text(_specialtyLabel(chef)),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Hủy'),
+                ),
+                FilledButton(
+                  onPressed: currentSelected == null
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(currentSelected),
+                  child: const Text('Xác nhận'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (!context.mounted || selectedChefId == null || selectedChefId.isEmpty) {
+      return;
+    }
+
+    context.read<HeadChefBoardCubit>().selectAssignee(
+      orderItemId: item.id,
+      assigneeId: selectedChefId,
+    );
+    await _assignItem(context, item.id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade900,
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
-        backgroundColor: Colors.grey.shade900,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.foregroundLight,
         title: const Text(
-          '🍳 Kitchen Display System',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          'KDS Bếp - HeadChef',
+          style: TextStyle(fontWeight: FontWeight.w800),
         ),
         actions: [
           IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_outlined),
+            tooltip: 'Làm mới',
+            onPressed: () => context.read<HeadChefBoardCubit>().refresh(),
+            icon: const Icon(Icons.refresh_rounded),
           ),
         ],
       ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.restaurant, size: 72, color: Colors.white24),
-            SizedBox(height: 16),
-            Text(
-              'Kitchen Display System',
-              style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Danh sách ticket đang chờ, đang làm, hoàn thành',
-              style: TextStyle(color: Colors.white54),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 24),
-            Chip(
-              label: Text('Chưa triển khai', style: TextStyle(color: Colors.orange)),
-              backgroundColor: Colors.orange,
-            ),
-          ],
+      body: SafeArea(
+        child: BlocBuilder<HeadChefBoardCubit, HeadChefBoardState>(
+          builder: (context, state) {
+            if (state is HeadChefBoardInitial ||
+                state is HeadChefBoardLoading) {
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              );
+            }
+            if (state is HeadChefBoardError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        color: AppColors.destructive,
+                        size: 42,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        state.message,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton.tonal(
+                        onPressed: () =>
+                            context.read<HeadChefBoardCubit>().load(),
+                        child: const Text('Thử lại'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            final data = state as HeadChefBoardLoaded;
+
+            return RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: () => context.read<HeadChefBoardCubit>().refresh(),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+                children: [
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      if (constraints.maxWidth < 1000) {
+                        return Column(
+                          children: [
+                            _StatusColumn(
+                              title: 'Chờ xác nhận',
+                              color: const Color(0xFFB45309),
+                              icon: Icons.hourglass_top_rounded,
+                              items: data.pendingItems,
+                              childBuilder: (item) {
+                                final selectedAssignee =
+                                    data.selectedAssigneesByOrderItem[item.id];
+                                return _PendingItemCard(
+                                  item: item,
+                                  chefs: data.availableChefs,
+                                  selectedAssigneeId: selectedAssignee,
+                                  isAssigning: data.assigningItemIds.contains(
+                                    item.id,
+                                  ),
+                                  onTap: () => _showAssignChefDialog(
+                                    context,
+                                    item: item,
+                                    chefs: data.availableChefs,
+                                    selectedAssigneeId: selectedAssignee,
+                                    isAssigning: data.assigningItemIds.contains(
+                                      item.id,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 10),
+                            _StatusColumn(
+                              title: 'Đang nấu',
+                              color: AppColors.primary,
+                              icon: Icons.local_fire_department_rounded,
+                              items: data.cookingItems,
+                              childBuilder: (item) =>
+                                  _ReadOnlyItemCard(item: item),
+                            ),
+                            const SizedBox(height: 10),
+                            _StatusColumn(
+                              title: 'Đã nấu',
+                              color: const Color(0xFF15803D),
+                              icon: Icons.done_all_rounded,
+                              items: data.readyItems,
+                              childBuilder: (item) =>
+                                  _ReadOnlyItemCard(item: item),
+                            ),
+                          ],
+                        );
+                      }
+
+                      return SizedBox(
+                        height: MediaQuery.of(context).size.height - 230,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _StatusColumn(
+                                title: 'Chờ xác nhận',
+                                color: const Color(0xFFB45309),
+                                icon: Icons.hourglass_top_rounded,
+                                items: data.pendingItems,
+                                childBuilder: (item) {
+                                  final selectedAssignee = data
+                                      .selectedAssigneesByOrderItem[item.id];
+                                  return _PendingItemCard(
+                                    item: item,
+                                    chefs: data.availableChefs,
+                                    selectedAssigneeId: selectedAssignee,
+                                    isAssigning: data.assigningItemIds.contains(
+                                      item.id,
+                                    ),
+                                    onTap: () => _showAssignChefDialog(
+                                      context,
+                                      item: item,
+                                      chefs: data.availableChefs,
+                                      selectedAssigneeId: selectedAssignee,
+                                      isAssigning: data.assigningItemIds
+                                          .contains(item.id),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _StatusColumn(
+                                title: 'Đang nấu',
+                                color: AppColors.primary,
+                                icon: Icons.local_fire_department_rounded,
+                                items: data.cookingItems,
+                                childBuilder: (item) =>
+                                    _ReadOnlyItemCard(item: item),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _StatusColumn(
+                                title: 'Đã nấu',
+                                color: const Color(0xFF15803D),
+                                icon: Icons.done_all_rounded,
+                                items: data.readyItems,
+                                childBuilder: (item) =>
+                                    _ReadOnlyItemCard(item: item),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
         ),
+      ),
+    );
+  }
+}
+
+class _StatusColumn extends StatelessWidget {
+  final String title;
+  final Color color;
+  final IconData icon;
+  final List<ServeItemEntity> items;
+  final Widget Function(ServeItemEntity item) childBuilder;
+
+  const _StatusColumn({
+    required this.title,
+    required this.color,
+    required this.icon,
+    required this.items,
+    required this.childBuilder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '$title (${items.length})',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: items.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Không có món nào',
+                      style: TextStyle(color: AppColors.mutedForeground),
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: items.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) => childBuilder(items[index]),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PendingItemCard extends StatelessWidget {
+  final ServeItemEntity item;
+  final List<ChefMemberEntity> chefs;
+  final String? selectedAssigneeId;
+  final bool isAssigning;
+  final VoidCallback onTap;
+
+  const _PendingItemCard({
+    required this.item,
+    required this.chefs,
+    required this.selectedAssigneeId,
+    required this.isAssigning,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFFFFBEB),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: isAssigning ? null : onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFFDE68A)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.productName,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 6),
+              Text('Bàn: ${item.tableNumber}'),
+              Text('Khu vực: ${item.areaName}'),
+              if (item.note?.trim().isNotEmpty == true)
+                Text('Ghi chú: ${item.note}')
+              else
+                const Text('Ghi chú: Không có'),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      selectedAssigneeId == null
+                          ? 'Nhấn để chọn đầu bếp'
+                          : 'Nhấn để đổi đầu bếp',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.mutedForeground,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (isAssigning)
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    const Icon(Icons.chevron_right_rounded),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReadOnlyItemCard extends StatelessWidget {
+  final ServeItemEntity item;
+
+  const _ReadOnlyItemCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFF8FAFC),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            item.productName,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text('Bàn: ${item.tableNumber}'),
+          Text('Khu vực: ${item.areaName}'),
+          if (item.note?.trim().isNotEmpty == true) ...[
+            Text('Ghi chú: ${item.note}'),
+          ] else
+            const Text('Ghi chú: Không có'),
+        ],
       ),
     );
   }

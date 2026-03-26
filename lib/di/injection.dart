@@ -13,6 +13,11 @@ import '../features/auth/domain/usecases/get_saved_role_usecase.dart';
 import '../features/auth/domain/usecases/login_usecase.dart';
 import '../features/auth/domain/usecases/logout_usecase.dart';
 import '../features/auth/presentation/cubit/auth_cubit.dart';
+import '../features/chef/data/datasources/chef_remote_datasource.dart';
+import '../features/chef/data/repositories/chef_repository_impl.dart';
+import '../features/chef/domain/repositories/chef_repository.dart';
+import '../features/chef/domain/usecases/get_available_chefs_usecase.dart';
+import '../features/kitchen/presentation/cubit/head_chef_board_cubit.dart';
 import '../features/orders/data/datasources/orders_remote_datasource.dart';
 import '../features/orders/data/repositories/orders_repository_impl.dart';
 import '../features/orders/domain/repositories/orders_repository.dart';
@@ -134,6 +139,24 @@ Future<void> initDependencies() async {
       getAreasUseCase: sl<GetAreasUseCase>(),
       getOrderItemsByStatusUseCase: sl<GetOrderItemsByStatusUseCase>(),
       updateOrderItemsStatusUseCase: sl<UpdateOrderItemsStatusUseCase>(),
+    ),
+  );
+
+  // ─── Chef: DataSource / Repository / UseCase ─────────────────────────────
+  sl.registerLazySingleton<ChefRemoteDataSource>(
+    () => ChefRemoteDataSourceImpl(dio: sl<Dio>()),
+  );
+  sl.registerLazySingleton<ChefRepository>(
+    () => ChefRepositoryImpl(remoteDataSource: sl<ChefRemoteDataSource>()),
+  );
+  sl.registerLazySingleton(() => GetAvailableChefsUseCase(sl<ChefRepository>()));
+
+  // ─── Kitchen: Cubit (HeadChef board) ─────────────────────────────────────
+  sl.registerFactory(
+    () => HeadChefBoardCubit(
+      getOrderItemsByStatusUseCase: sl<GetOrderItemsByStatusUseCase>(),
+      updateOrderItemsStatusUseCase: sl<UpdateOrderItemsStatusUseCase>(),
+      getAvailableChefsUseCase: sl<GetAvailableChefsUseCase>(),
     ),
   );
 

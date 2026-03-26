@@ -17,8 +17,8 @@ abstract class TableRemoteDataSource {
   Future<String> updateOrderItemsStatus({
     required List<String> orderItemIds,
     required int newStatus,
-    required String accountId,
-    required String changeSource,
+    String? accountId,
+    String? changeSource,
     String? assigneeId,
   });
   Future<String> createOrder({
@@ -258,20 +258,27 @@ class TableRemoteDataSourceImpl implements TableRemoteDataSource {
   Future<String> updateOrderItemsStatus({
     required List<String> orderItemIds,
     required int newStatus,
-    required String accountId,
-    required String changeSource,
+    String? accountId,
+    String? changeSource,
     String? assigneeId,
   }) async {
     try {
+      final payload = <String, dynamic>{
+        'orderItemIds': orderItemIds,
+        'newStatus': newStatus,
+        'assigneeId': assigneeId,
+      };
+
+      if (accountId != null && accountId.trim().isNotEmpty) {
+        payload['accountId'] = accountId;
+      }
+      if (changeSource != null && changeSource.trim().isNotEmpty) {
+        payload['changeSource'] = changeSource;
+      }
+
       final response = await dio.put(
         ApiConstants.orderItemsUpdateStatus,
-        data: {
-          'orderItemIds': orderItemIds,
-          'newStatus': newStatus,
-          'accountId': accountId,
-          'changeSource': changeSource,
-          'assigneeId': assigneeId,
-        },
+        data: payload,
         options: Options(
           extra: {
             ApiRequestOptions.showSuccessMessage: true,
