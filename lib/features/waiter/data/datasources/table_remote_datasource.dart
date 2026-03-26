@@ -191,6 +191,8 @@ class TableRemoteDataSourceImpl implements TableRemoteDataSource {
         invalidFormatMessage: 'Phản hồi tạo đơn không đúng định dạng.',
       );
 
+      await _createQrSession(tableId);
+
       final rawData = baseResponse.data;
       if (rawData is String) {
         return rawData;
@@ -206,6 +208,14 @@ class TableRemoteDataSourceImpl implements TableRemoteDataSource {
           fallbackMessage: 'Lỗi kết nối máy chủ.',
         ),
       );
+    }
+  }
+
+  Future<void> _createQrSession(String tableId) async {
+    try {
+      await dio.post('${ApiConstants.tableQrSession}/$tableId');
+    } on DioException catch (_) {
+      // Không chặn luồng tạo order nếu tạo QR session bị lỗi.
     }
   }
 

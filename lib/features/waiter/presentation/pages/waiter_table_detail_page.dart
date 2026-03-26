@@ -54,6 +54,43 @@ class _WaiterTableDetailView extends StatelessWidget {
           return const SizedBox.shrink();
         },
       ),
+      bottomNavigationBar: BlocBuilder<TableDetailCubit, TableDetailState>(
+        builder: (context, state) {
+          if (state is! TableDetailLoaded) {
+            return const SizedBox.shrink();
+          }
+
+          final activeOrder = state.table.activeOrder;
+          final orderId = activeOrder?.id ?? '';
+          if (!state.table.hasActiveOrder || orderId.isEmpty) {
+            return const SizedBox.shrink();
+          }
+
+          return SafeArea(
+            top: false,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: AppColors.border)),
+              ),
+              child: FilledButton.icon(
+                onPressed: () => context.push(AppRoutes.waiterOrderMenuOf(orderId)),
+                icon: const Icon(Icons.restaurant_menu_rounded),
+                label: const Text('Gọi món'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  textStyle: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

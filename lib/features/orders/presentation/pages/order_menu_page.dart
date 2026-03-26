@@ -127,11 +127,25 @@ class _OrderMenuView extends StatelessWidget {
   }
 }
 
-class _OrderMenuContent extends StatelessWidget {
+class _OrderMenuContent extends StatefulWidget {
   final String orderId;
   final OrderMenuState state;
 
   const _OrderMenuContent({required this.orderId, required this.state});
+
+  @override
+  State<_OrderMenuContent> createState() => _OrderMenuContentState();
+}
+
+class _OrderMenuContentState extends State<_OrderMenuContent> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   String _formatVnd(int amount) {
     final digits = amount.toString();
@@ -151,9 +165,10 @@ class _OrderMenuContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final grouped = _buildGroupedProducts(
-      categories: state.categories,
-      products: state.products,
-      selectedCategoryName: state.selectedCategoryName,
+      categories: widget.state.categories,
+      products: widget.state.products,
+      selectedCategoryName: widget.state.selectedCategoryName,
+      searchQuery: _searchQuery,
     );
 
     return NotificationListener<ScrollNotification>(
@@ -167,9 +182,18 @@ class _OrderMenuContent extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
         children: [
+          _ProductSearchField(
+            controller: _searchController,
+            onChanged: (value) => setState(() => _searchQuery = value),
+            onClear: () {
+              _searchController.clear();
+              setState(() => _searchQuery = '');
+            },
+          ),
+          const SizedBox(height: 12),
           _CategoryFilter(
-            categories: state.categories,
-            selectedCategoryName: state.selectedCategoryName,
+            categories: widget.state.categories,
+            selectedCategoryName: widget.state.selectedCategoryName,
             onSelected: (value) =>
                 context.read<OrderMenuCubit>().selectCategory(value),
           ),
@@ -191,7 +215,9 @@ class _OrderMenuContent extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Không có món trong danh mục này',
+                    _searchQuery.trim().isNotEmpty
+                        ? 'Không tìm thấy món phù hợp với "${_searchQuery.trim()}"'
+                        : 'Không có món trong danh mục này',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppColors.mutedForeground,
                     ),
@@ -210,14 +236,14 @@ class _OrderMenuContent extends StatelessWidget {
                 ),
               ),
             ),
-          if (state.isLoadingMore)
+          if (widget.state.isLoadingMore)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Center(
                 child: CircularProgressIndicator(color: AppColors.primary),
               ),
             ),
-          if (!state.hasNextPage && state.products.isNotEmpty)
+          if (!widget.state.hasNextPage && widget.state.products.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8, bottom: 6),
               child: Center(
@@ -238,15 +264,21 @@ class _OrderMenuContent extends StatelessWidget {
     required List<CategoryEntity> categories,
     required List<ProductEntity> products,
     required String? selectedCategoryName,
+    required String searchQuery,
   }) {
     final orderedKeys = categories.map((item) => item.name).toList();
     final grouped = <String, List<ProductEntity>>{};
+    final normalizedQuery = _normalize(searchQuery);
 
     final filtered = selectedCategoryName == null
         ? products
         : products.where((item) => item.categoryName == selectedCategoryName);
 
     for (final product in filtered) {
+      if (normalizedQuery.isNotEmpty &&
+          !_normalize(product.name).contains(normalizedQuery)) {
+        continue;
+      }
       grouped.putIfAbsent(product.categoryName, () => []).add(product);
     }
 
@@ -262,6 +294,55 @@ class _OrderMenuContent extends StatelessWidget {
     }
 
     return result;
+  }
+
+  String _normalize(String value) => value.trim().toLowerCase();
+}
+
+class _ProductSearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  const _ProductSearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: 'Tìm món theo tên...',
+        prefixIcon: const Icon(Icons.search_rounded),
+        suffixIcon: controller.text.isEmpty
+            ? null
+            : IconButton(
+                onPressed: onClear,
+                icon: const Icon(Icons.close_rounded),
+                tooltip: 'Xóa tìm kiếm',
+              ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.4),
+        ),
+      ),
+    );
   }
 }
 
