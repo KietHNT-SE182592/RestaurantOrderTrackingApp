@@ -45,7 +45,7 @@ class TableDetailCubit extends Cubit<TableDetailState> {
   TableDetailCubit({
     required GetTableDetailUseCase getTableDetailUseCase,
     required CreateOrderUseCase createOrderUseCase,
-     required UpdateTableStatusUseCase updateTableStatusUseCase,
+    required UpdateTableStatusUseCase updateTableStatusUseCase,
     required GetOrderDetailUseCase getOrderDetailUseCase,
   }) : _createOrderUseCase = createOrderUseCase,
        _updateTableStatusUseCase = updateTableStatusUseCase,
@@ -180,15 +180,35 @@ class TableDetailCubit extends Cubit<TableDetailState> {
       return;
     }
 
-    emit(
-      TableDetailLoaded(
-        currentTable,
-        isUpdatingTableStatus: true,
-      ),
-    );
+    emit(TableDetailLoaded(currentTable, isUpdatingTableStatus: true));
 
     try {
       await _updateTableStatusUseCase(tableId: currentTable.id, status: 2);
+      final refreshedTable = await _getTableDetailUseCase(currentTable.id);
+      final hydratedTable = await _hydrateOrderDetail(refreshedTable);
+      emit(TableDetailLoaded(hydratedTable));
+    } on ServerFailure {
+      emit(TableDetailLoaded(currentTable));
+      rethrow;
+    } catch (_) {
+      emit(TableDetailLoaded(currentTable));
+      rethrow;
+    }
+  }
+
+  Future<void> unmergeCurrentTable() async {
+    final currentState = state;
+    if (currentState is! TableDetailLoaded) return;
+
+    final currentTable = currentState.table;
+    if (!currentTable.isMergedWithoutOrder) {
+      return;
+    }
+
+    emit(TableDetailLoaded(currentTable, isUpdatingTableStatus: true));
+
+    try {
+      await _updateTableStatusUseCase(tableId: currentTable.id, status: 0);
       final refreshedTable = await _getTableDetailUseCase(currentTable.id);
       final hydratedTable = await _hydrateOrderDetail(refreshedTable);
       emit(TableDetailLoaded(hydratedTable));

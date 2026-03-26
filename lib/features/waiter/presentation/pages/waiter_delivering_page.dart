@@ -226,10 +226,7 @@ class _DeliveringHeader extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
-              Icons.delivery_dining_rounded,
-              color: Colors.white,
-            ),
+            child: const Icon(Icons.room_service_rounded, color: Colors.white),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -291,7 +288,7 @@ class _ServeFlowSwitcher extends StatelessWidget {
           Expanded(
             child: _FlowTabButton(
               label: 'Đang mang ra',
-              icon: Icons.delivery_dining_rounded,
+              icon: Icons.room_service_rounded,
               selected: !isServingTab,
               onTap: () {
                 if (!isServingTab) return;

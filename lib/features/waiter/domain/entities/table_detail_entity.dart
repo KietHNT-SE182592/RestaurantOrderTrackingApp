@@ -77,5 +77,8 @@ class TableDetailEntity {
 
   bool get hasActiveOrder => activeOrder != null;
 
+  bool get isMergedWithoutOrder =>
+      status == TableStatus.reserved && activeOrder == null;
+
   int get statusCode => status.apiCode;
 }

@@ -139,6 +139,21 @@ class _DetailContent extends StatelessWidget {
     }
   }
 
+  Future<void> _handleUnmergeTable(BuildContext context) async {
+    try {
+      await context.read<TableDetailCubit>().unmergeCurrentTable();
+    } on ServerFailure {
+      if (!context.mounted) return;
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không thể bỏ gộp bàn. Vui lòng thử lại.'),
+        ),
+      );
+    }
+  }
+
   String get _statusLabel => table.status.viLabel;
 
   Future<void> _handleCreateOrder(BuildContext context) async {
@@ -182,24 +197,30 @@ class _DetailContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        _buildAppBar(context),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeroCard(context),
-                const SizedBox(height: 20),
-                _buildOrdersSection(context),
-                const SizedBox(height: 32),
-              ],
+    return RefreshIndicator(
+      color: AppColors.primary,
+      backgroundColor: Colors.white,
+      onRefresh: () => context.read<TableDetailCubit>().retry(),
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          _buildAppBar(context),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeroCard(context),
+                  const SizedBox(height: 20),
+                  _buildOrdersSection(context),
+                  const SizedBox(height: 32),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -417,7 +438,75 @@ class _DetailContent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (table.isAvailable)
+                if (table.isMergedWithoutOrder)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.secondary.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.merge_type_rounded,
+                              size: 18,
+                              color: AppColors.foregroundLight,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Bàn này đang ở trạng thái gộp bàn.',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: AppColors.foregroundLight,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: isUpdatingTableStatus
+                                ? null
+                                : () => _handleUnmergeTable(context),
+                            icon: isUpdatingTableStatus
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.link_off_rounded),
+                            label: Text(
+                              isUpdatingTableStatus
+                                  ? 'Đang cập nhật...'
+                                  : 'Bỏ gộp bàn',
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              side: BorderSide(
+                                color: AppColors.foregroundLight,
+                              ),
+                              foregroundColor: AppColors.foregroundLight,
+                              textStyle: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (table.isAvailable)
                   Column(
                     children: [
                       SizedBox(

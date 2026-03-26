@@ -33,8 +33,8 @@ class WaiterShellPage extends StatelessWidget {
             label: 'Sơ đồ bàn',
           ),
           NavigationDestination(
-            icon: Icon(Icons.delivery_dining_outlined),
-            selectedIcon: Icon(Icons.delivery_dining),
+            icon: Icon(Icons.room_service_outlined),
+            selectedIcon: Icon(Icons.room_service),
             label: 'Ra món',
           ),
         ],
