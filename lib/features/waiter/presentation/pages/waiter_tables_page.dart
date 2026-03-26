@@ -176,14 +176,23 @@ class _StatusDropdownFilter extends StatelessWidget {
       builder: (context, state) {
         if (state is! TableListLoaded) return const SizedBox.shrink();
 
+        const filterableStatuses = [
+          TableStatus.available,
+          TableStatus.reserved,
+        ];
         final selectedStatus = state.selectedStatus;
+        final effectiveSelectedStatus = filterableStatuses.contains(selectedStatus)
+            ? selectedStatus
+            : null;
+        if (selectedStatus != null && effectiveSelectedStatus == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!context.mounted) return;
+            context.read<TableListCubit>().selectStatus(null);
+          });
+        }
         final totalCount = state.tables.length;
         final statusCounts = {
-          for (final status in const [
-            TableStatus.available,
-            TableStatus.occupied,
-            TableStatus.reserved,
-          ])
+          for (final status in filterableStatuses)
             status: state.tables
                 .where((table) => table.status == status)
                 .length,
@@ -206,7 +215,7 @@ class _StatusDropdownFilter extends StatelessWidget {
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<TableStatus?>(
                     isExpanded: true,
-                    value: selectedStatus,
+                    value: effectiveSelectedStatus,
                     icon: const Icon(
                       Icons.keyboard_arrow_down_rounded,
                       color: AppColors.mutedForeground,
