@@ -6,6 +6,7 @@ class ApiConstants {
   static const String login = '/Auth/login';
   static const String areas = '/Area';
   static const String tables = '/Table';
+  static const String tablesUpdateStatus = '/Table/update-status';
   static const String orders = '/Order';
   static const String orderItems = '/OrderItem';
   static const String orderItemsUpdateStatus = '/OrderItem/Update-Status';

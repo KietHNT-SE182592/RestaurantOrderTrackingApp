@@ -54,6 +54,7 @@ class _WaiterTableDetailView extends StatelessWidget {
             return _DetailContent(
               table: state.table,
               isCreatingOrder: state.isCreatingOrder,
+              isUpdatingTableStatus: state.isUpdatingTableStatus,
             );
           }
           return const SizedBox.shrink();
@@ -104,8 +105,13 @@ class _WaiterTableDetailView extends StatelessWidget {
 class _DetailContent extends StatelessWidget {
   final TableDetailEntity table;
   final bool isCreatingOrder;
+  final bool isUpdatingTableStatus;
 
-  const _DetailContent({required this.table, required this.isCreatingOrder});
+  const _DetailContent({
+    required this.table,
+    required this.isCreatingOrder,
+    required this.isUpdatingTableStatus,
+  });
 
   Color get _statusColor {
     switch (table.status) {
@@ -117,6 +123,19 @@ class _DetailContent extends StatelessWidget {
         return AppColors.secondary;
       default:
         return AppColors.mutedForeground;
+    }
+  }
+
+  Future<void> _handleMergeTable(BuildContext context) async {
+    try {
+      await context.read<TableDetailCubit>().mergeCurrentTable();
+    } on ServerFailure {
+      if (!context.mounted) return;
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không thể gộp bàn. Vui lòng thử lại.')),
+      );
     }
   }
 
@@ -399,33 +418,67 @@ class _DetailContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 if (table.isAvailable)
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: isCreatingOrder
-                          ? null
-                          : () => _handleCreateOrder(context),
-                      icon: isCreatingOrder
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.add_circle_outline_rounded),
-                      label: Text(
-                        isCreatingOrder ? 'Đang tạo đơn...' : 'Tạo đơn mới',
+                  Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: (isCreatingOrder || isUpdatingTableStatus)
+                              ? null
+                              : () => _handleCreateOrder(context),
+                          icon: isCreatingOrder
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.add_circle_outline_rounded),
+                          label: Text(
+                            isCreatingOrder ? 'Đang tạo đơn...' : 'Tạo đơn mới',
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            textStyle: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ),
                       ),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        textStyle: Theme.of(context).textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: (isCreatingOrder || isUpdatingTableStatus)
+                              ? null
+                              : () => _handleMergeTable(context),
+                          icon: isUpdatingTableStatus
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.merge_type_rounded),
+                          label: Text(
+                            isUpdatingTableStatus
+                                ? 'Đang gộp bàn...'
+                                : 'Gộp bàn',
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: BorderSide(color: AppColors.primary),
+                            foregroundColor: AppColors.primary,
+                            textStyle: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   )
                 else
                   Text(

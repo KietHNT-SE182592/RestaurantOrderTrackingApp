@@ -1,7 +1,7 @@
 enum TableStatus {
   available(0, 'Available', 'Trống'),
-  occupied(1, 'Occupied', 'Đang phục vụ'),
-  reserved(2, 'Reserved', 'Đặt trước'),
+  occupied(1, 'Occupied', 'Đặt trước'),
+  reserved(2, 'Reserved', 'Đang phục vụ'),
   unknown(-1, 'Unknown', 'Không xác định');
 
   const TableStatus(this.apiCode, this.apiName, this.viLabel);

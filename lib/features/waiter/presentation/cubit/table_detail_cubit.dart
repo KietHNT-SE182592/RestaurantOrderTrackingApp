@@ -6,6 +6,7 @@ import '../../../orders/domain/usecases/get_order_detail_usecase.dart';
 import '../../domain/entities/table_detail_entity.dart';
 import '../../domain/usecases/create_order_usecase.dart';
 import '../../domain/usecases/get_table_detail_usecase.dart';
+import '../../domain/usecases/update_table_status_usecase.dart';
 
 // ─── States ───────────────────────────────────────────────────────────────────
 
@@ -18,8 +19,13 @@ class TableDetailLoading extends TableDetailState {}
 class TableDetailLoaded extends TableDetailState {
   final TableDetailEntity table;
   final bool isCreatingOrder;
+  final bool isUpdatingTableStatus;
 
-  TableDetailLoaded(this.table, {this.isCreatingOrder = false});
+  TableDetailLoaded(
+    this.table, {
+    this.isCreatingOrder = false,
+    this.isUpdatingTableStatus = false,
+  });
 }
 
 class TableDetailError extends TableDetailState {
@@ -32,14 +38,17 @@ class TableDetailError extends TableDetailState {
 class TableDetailCubit extends Cubit<TableDetailState> {
   final GetTableDetailUseCase _getTableDetailUseCase;
   final CreateOrderUseCase _createOrderUseCase;
+  final UpdateTableStatusUseCase _updateTableStatusUseCase;
   final GetOrderDetailUseCase _getOrderDetailUseCase;
   String? _lastTableId;
 
   TableDetailCubit({
     required GetTableDetailUseCase getTableDetailUseCase,
     required CreateOrderUseCase createOrderUseCase,
+     required UpdateTableStatusUseCase updateTableStatusUseCase,
     required GetOrderDetailUseCase getOrderDetailUseCase,
   }) : _createOrderUseCase = createOrderUseCase,
+       _updateTableStatusUseCase = updateTableStatusUseCase,
        _getOrderDetailUseCase = getOrderDetailUseCase,
        _getTableDetailUseCase = getTableDetailUseCase,
        super(TableDetailInitial());
@@ -153,6 +162,36 @@ class TableDetailCubit extends Cubit<TableDetailState> {
 
       emit(TableDetailLoaded(hydratedTable));
       return hydratedTable.activeOrder?.id;
+    } on ServerFailure {
+      emit(TableDetailLoaded(currentTable));
+      rethrow;
+    } catch (_) {
+      emit(TableDetailLoaded(currentTable));
+      rethrow;
+    }
+  }
+
+  Future<void> mergeCurrentTable() async {
+    final currentState = state;
+    if (currentState is! TableDetailLoaded) return;
+
+    final currentTable = currentState.table;
+    if (!currentTable.isAvailable || currentTable.hasActiveOrder) {
+      return;
+    }
+
+    emit(
+      TableDetailLoaded(
+        currentTable,
+        isUpdatingTableStatus: true,
+      ),
+    );
+
+    try {
+      await _updateTableStatusUseCase(tableId: currentTable.id, status: 2);
+      final refreshedTable = await _getTableDetailUseCase(currentTable.id);
+      final hydratedTable = await _hydrateOrderDetail(refreshedTable);
+      emit(TableDetailLoaded(hydratedTable));
     } on ServerFailure {
       emit(TableDetailLoaded(currentTable));
       rethrow;

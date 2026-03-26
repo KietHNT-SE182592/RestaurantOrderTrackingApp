@@ -23,6 +23,12 @@ abstract class TableRepository {
     required int orderType,
   });
 
+  /// Cập nhật trạng thái một bàn.
+  Future<String> updateTableStatus({
+    required String tableId,
+    required int status,
+  });
+
   /// Lấy danh sách order item theo trạng thái (API status code).
   Future<List<ServeItemEntity>> getOrderItemsByStatus({required int status});
 

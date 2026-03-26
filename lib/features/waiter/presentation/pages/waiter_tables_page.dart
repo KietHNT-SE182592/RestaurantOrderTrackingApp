@@ -34,6 +34,8 @@ class _WaiterTablesView extends StatelessWidget {
           children: [
             _buildHeader(context),
             const _AreaFilterBar(),
+            const SizedBox(height: 8),
+            const _StatusDropdownFilter(),
             const Expanded(child: _TableGrid()),
           ],
         ),
@@ -73,11 +75,20 @@ class _WaiterTablesView extends StatelessWidget {
               BlocBuilder<TableListCubit, TableListState>(
                 builder: (context, state) {
                   if (state is TableListLoaded) {
-                    final available = state.tables
+                    final visibleTables = state.filteredTables;
+                    final available = visibleTables
                         .where((t) => t.isAvailable)
                         .length;
+                    final hasFilters =
+                        state.selectedAreaId.isNotEmpty ||
+                        state.selectedStatus != null;
+
+                    final subtitle = hasFilters
+                        ? '$available / ${visibleTables.length} bàn trống (đã lọc)'
+                        : '$available / ${state.tables.length} bàn trống';
+
                     return Text(
-                      '$available / ${state.tables.length} bàn trống',
+                      subtitle,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.mutedForeground,
                       ),
@@ -153,6 +164,160 @@ class _AreaFilterBar extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+class _StatusDropdownFilter extends StatelessWidget {
+  const _StatusDropdownFilter();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<TableListCubit, TableListState>(
+      builder: (context, state) {
+        if (state is! TableListLoaded) return const SizedBox.shrink();
+
+        final selectedStatus = state.selectedStatus;
+        final totalCount = state.tables.length;
+        final statusCounts = {
+          for (final status in const [
+            TableStatus.available,
+            TableStatus.occupied,
+            TableStatus.reserved,
+          ])
+            status: state.tables
+                .where((table) => table.status == status)
+                .length,
+        };
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              const Spacer(),
+              Container(
+                height: 44,
+                constraints: const BoxConstraints(minWidth: 180, maxWidth: 230),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border, width: 1.2),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<TableStatus?>(
+                    isExpanded: true,
+                    value: selectedStatus,
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.mutedForeground,
+                      size: 20,
+                    ),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.foregroundLight,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    selectedItemBuilder: (context) => [
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Colors.transparent,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Trạng thái: Tất cả',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: AppColors.foregroundLight,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      ...statusCounts.entries.map(
+                        (entry) => Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: _statusFilterColor(entry.key),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Trạng thái: ${entry.key.viLabel}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: AppColors.foregroundLight,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    items: [
+                      DropdownMenuItem<TableStatus?>(
+                        value: null,
+                        child: Text('Tất cả ($totalCount)'),
+                      ),
+                      ...statusCounts.entries.map(
+                        (entry) => DropdownMenuItem<TableStatus?>(
+                          value: entry.key,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: _statusFilterColor(entry.key),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text('${entry.key.viLabel} (${entry.value})'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) =>
+                        context.read<TableListCubit>().selectStatus(value),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+Color _statusFilterColor(TableStatus status) {
+  switch (status) {
+    case TableStatus.available:
+      return const Color(0xFF22C55E);
+    case TableStatus.occupied:
+      return const Color(0xFFEF4444);
+    case TableStatus.reserved:
+      return AppColors.secondary;
+    default:
+      return AppColors.mutedForeground;
   }
 }
 
@@ -234,7 +399,11 @@ class _TableGrid extends StatelessWidget {
                       .where((a) => a.id == state.selectedAreaId)
                       .map((a) => a.name)
                       .firstOrNull;
-            return _EmptyView(areaName: matchedArea);
+            final selectedStatusLabel = state.selectedStatus?.viLabel;
+            return _EmptyView(
+              areaName: matchedArea,
+              statusLabel: selectedStatusLabel,
+            );
           }
 
           return RefreshIndicator(
@@ -463,7 +632,9 @@ class _SkeletonCardState extends State<_SkeletonCard>
 
 class _EmptyView extends StatelessWidget {
   final String? areaName;
-  const _EmptyView({this.areaName});
+  final String? statusLabel;
+
+  const _EmptyView({this.areaName, this.statusLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -486,9 +657,7 @@ class _EmptyView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            areaName != null
-                ? 'Không có bàn trong "$areaName"'
-                : 'Không có bàn nào',
+            _message,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: AppColors.foregroundLight,
               fontWeight: FontWeight.w600,
@@ -497,6 +666,19 @@ class _EmptyView extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String get _message {
+    if (areaName != null && statusLabel != null) {
+      return 'Không có bàn "$statusLabel" trong "$areaName"';
+    }
+    if (areaName != null) {
+      return 'Không có bàn trong "$areaName"';
+    }
+    if (statusLabel != null) {
+      return 'Không có bàn "$statusLabel"';
+    }
+    return 'Không có bàn nào';
   }
 }
 

@@ -31,6 +31,7 @@ import '../features/waiter/domain/usecases/get_order_items_by_status_usecase.dar
 import '../features/waiter/domain/usecases/get_table_detail_usecase.dart';
 import '../features/waiter/domain/usecases/get_tables_usecase.dart';
 import '../features/waiter/domain/usecases/update_order_items_status_usecase.dart';
+import '../features/waiter/domain/usecases/update_table_status_usecase.dart';
 import '../features/waiter/presentation/cubit/table_detail_cubit.dart';
 import '../features/waiter/presentation/cubit/table_list_cubit.dart';
 import '../features/waiter/presentation/cubit/waiter_delivering_cubit.dart';
@@ -98,6 +99,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => GetTablesUseCase(sl<TableRepository>()));
   sl.registerLazySingleton(() => GetTableDetailUseCase(sl<TableRepository>()));
   sl.registerLazySingleton(() => CreateOrderUseCase(sl<TableRepository>()));
+  sl.registerLazySingleton(() => UpdateTableStatusUseCase(sl<TableRepository>()));
   sl.registerLazySingleton(
     () => GetOrderItemsByStatusUseCase(sl<TableRepository>()),
   );
@@ -116,6 +118,7 @@ Future<void> initDependencies() async {
     () => TableDetailCubit(
       getTableDetailUseCase: sl<GetTableDetailUseCase>(),
       createOrderUseCase: sl<CreateOrderUseCase>(),
+      updateTableStatusUseCase: sl<UpdateTableStatusUseCase>(),
       getOrderDetailUseCase: sl<GetOrderDetailUseCase>(),
     ),
   );

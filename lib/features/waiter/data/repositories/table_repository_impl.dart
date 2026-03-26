@@ -63,6 +63,21 @@ class TableRepositoryImpl implements TableRepository {
   }
 
   @override
+  Future<String> updateTableStatus({
+    required String tableId,
+    required int status,
+  }) async {
+    try {
+      return await remoteDataSource.updateTableStatus(
+        tableId: tableId,
+        status: status,
+      );
+    } on ServerException catch (e) {
+      throw ServerFailure(e.message);
+    }
+  }
+
+  @override
   Future<List<ServeItemEntity>> getOrderItemsByStatus({
     required int status,
   }) async {

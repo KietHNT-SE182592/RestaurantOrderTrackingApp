@@ -26,6 +26,10 @@ abstract class TableRemoteDataSource {
     required String accountId,
     required int orderType,
   });
+  Future<String> updateTableStatus({
+    required String tableId,
+    required int status,
+  });
 }
 
 class TableRemoteDataSourceImpl implements TableRemoteDataSource {
@@ -195,6 +199,41 @@ class TableRemoteDataSourceImpl implements TableRemoteDataSource {
         return rawData['id'] as String? ?? '';
       }
       throw ServerException('Dữ liệu tạo đơn không hợp lệ.');
+    } on DioException catch (e) {
+      throw ServerException(
+        BaseResponseDecoder.extractErrorMessage(
+          e,
+          fallbackMessage: 'Lỗi kết nối máy chủ.',
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<String> updateTableStatus({
+    required String tableId,
+    required int status,
+  }) async {
+    try {
+      final response = await dio.put(
+        ApiConstants.tablesUpdateStatus,
+        data: {'id': tableId, 'status': status},
+        options: Options(
+          extra: {
+            ApiRequestOptions.showSuccessMessage: true,
+            ApiRequestOptions.showErrorMessage: true,
+          },
+        ),
+      );
+
+      final baseResponse = BaseResponseDecoder.requireSuccess(
+        response.data,
+        fallbackErrorMessage: 'Không thể cập nhật trạng thái bàn',
+        invalidFormatMessage:
+            'Phản hồi cập nhật trạng thái bàn không đúng định dạng.',
+      );
+
+      return baseResponse.messageOr('Cập nhật trạng thái bàn thành công.');
     } on DioException catch (e) {
       throw ServerException(
         BaseResponseDecoder.extractErrorMessage(
