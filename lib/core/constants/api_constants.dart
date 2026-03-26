@@ -1,6 +1,21 @@
+import 'package:flutter/foundation.dart';
+
 class ApiConstants {
-  // Đổi localhost thành IP của máy Mac nếu test trên điện thoại thật
-  static const String baseUrl = 'http://localhost:5015/api';
+  // Ưu tiên nhận từ --dart-define=BASE_URL=...
+  // Nếu không có, Android emulator dùng 10.0.2.2 thay vì localhost.
+  static const String _baseUrlFromEnv = String.fromEnvironment('BASE_URL');
+
+  static String get baseUrl {
+    if (_baseUrlFromEnv.isNotEmpty) {
+      return _baseUrlFromEnv;
+    }
+
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:5015/api';
+    }
+
+    return 'http://localhost:5015/api';
+  }
 
   // Endpoints
   static const String login = '/Auth/login';
