@@ -29,12 +29,6 @@ class WaiterTableDetailPage extends StatelessWidget {
 class _WaiterTableDetailView extends StatelessWidget {
   const _WaiterTableDetailView();
 
-  Future<void> _goToOrderMenu(BuildContext context, String orderId) async {
-    await context.push(AppRoutes.waiterOrderMenuOf(orderId));
-    if (!context.mounted) return;
-    await context.read<TableDetailCubit>().retry();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -58,42 +52,6 @@ class _WaiterTableDetailView extends StatelessWidget {
             );
           }
           return const SizedBox.shrink();
-        },
-      ),
-      bottomNavigationBar: BlocBuilder<TableDetailCubit, TableDetailState>(
-        builder: (context, state) {
-          if (state is! TableDetailLoaded) {
-            return const SizedBox.shrink();
-          }
-          final orderId = state.table.activeOrder?.id;
-          if (orderId == null || orderId.isEmpty) {
-            return const SizedBox.shrink();
-          }
-
-          return SafeArea(
-            top: false,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: AppColors.border)),
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => _goToOrderMenu(context, orderId),
-                  icon: const Icon(Icons.restaurant_menu_rounded),
-                  label: const Text('Gọi món'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    textStyle: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
         },
       ),
     );

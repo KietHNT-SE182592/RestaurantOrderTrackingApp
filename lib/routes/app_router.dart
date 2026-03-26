@@ -28,7 +28,6 @@ import '../features/orders/presentation/pages/order_menu_page.dart';
 import '../features/waiter/domain/entities/table_detail_entity.dart';
 import '../features/waiter/presentation/pages/waiter_order_item_detail_page.dart';
 import '../features/waiter/presentation/pages/waiter_delivering_page.dart';
-import '../features/waiter/presentation/pages/waiter_pos_page.dart';
 import '../features/waiter/presentation/pages/waiter_serve_page.dart';
 import '../features/waiter/presentation/pages/waiter_shell_page.dart';
 import '../features/waiter/presentation/pages/waiter_table_detail_page.dart';
@@ -180,19 +179,11 @@ class AppRouter {
           ],
         ),
 
-        // ─── Waiter — 3 tabs ──────────────────────────────────────────────────
+        // ─── Waiter — 2 tabs ──────────────────────────────────────────────────
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) =>
               WaiterShellPage(navigationShell: navigationShell),
           branches: [
-            StatefulShellBranch(
-              routes: [
-                GoRoute(
-                  path: AppRoutes.waiterPos,
-                  builder: (context, state) => const WaiterPosPage(),
-                ),
-              ],
-            ),
             StatefulShellBranch(
               routes: [
                 GoRoute(

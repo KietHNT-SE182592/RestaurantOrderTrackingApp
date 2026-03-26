@@ -22,7 +22,6 @@ abstract class AppRoutes {
   static const String kitchenDisplay = '/kitchen/display';
 
   // ─── Waiter ──────────────────────────────────────────────────────────────────
-  static const String waiterPos = '/waiter/pos';
   static const String waiterTables = '/waiter/tables';
   static const String waiterServe = '/waiter/serve';
   static const String waiterDelivering = '/waiter/delivering';
@@ -67,7 +66,7 @@ abstract class AppRoutes {
       case 'Chef':
         return kitchenDisplay;
       case 'Waiter':
-        return waiterPos;
+        return waiterTables;
       case 'Cashier':
         return cashierOrders;
       default:
