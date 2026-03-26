@@ -14,6 +14,7 @@ abstract class TableRemoteDataSource {
   Future<List<TableModel>> getTables({int pageIndex, int pageSize});
   Future<TableDetailModel> getTableDetail(String tableId);
   Future<List<ServeItemModel>> getOrderItemsByStatus({required int status});
+  Future<List<ServeItemModel>> getOrderItemsByAccount();
   Future<String> updateOrderItemsStatus({
     required List<String> orderItemIds,
     required int newStatus,
@@ -164,6 +165,38 @@ class TableRemoteDataSourceImpl implements TableRemoteDataSource {
   }
 
   @override
+  Future<List<ServeItemModel>> getOrderItemsByAccount() async {
+    try {
+      final response = await dio.get(ApiConstants.orderItemsByAccount);
+
+      final payload = response.data;
+      final rawList = payload is List<dynamic>
+          ? payload
+          : BaseResponseDecoder.requireListData(
+              BaseResponseDecoder.requireSuccess(
+                payload,
+                fallbackErrorMessage: 'Không thể tải danh sách món của đầu bếp',
+                invalidFormatMessage:
+                    'Phản hồi danh sách món của đầu bếp không đúng định dạng.',
+              ),
+              fallbackErrorMessage: 'Dữ liệu món của đầu bếp không hợp lệ.',
+            );
+
+      return rawList
+          .whereType<Map<String, dynamic>>()
+          .map(ServeItemModel.fromJson)
+          .toList();
+    } on DioException catch (e) {
+      throw ServerException(
+        BaseResponseDecoder.extractErrorMessage(
+          e,
+          fallbackMessage: 'Lỗi kết nối máy chủ.',
+        ),
+      );
+    }
+  }
+
+  @override
   Future<String> createOrder({
     required String tableId,
     required String accountId,
@@ -272,7 +305,7 @@ class TableRemoteDataSourceImpl implements TableRemoteDataSource {
       if (accountId != null && accountId.trim().isNotEmpty) {
         payload['accountId'] = accountId;
       }
-      if (changeSource != null && changeSource.trim().isNotEmpty) {
+      if (changeSource != null) {
         payload['changeSource'] = changeSource;
       }
 

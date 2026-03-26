@@ -163,7 +163,7 @@ class HeadChefBoardCubit extends Cubit<HeadChefBoardState> {
         orderItemIds: [orderItemId],
         newStatus: _cookingStatus,
         accountId: null,
-        changeSource: null,
+        changeSource: '',
         assigneeId: assigneeId,
       );
       await load(keepSelections: true);

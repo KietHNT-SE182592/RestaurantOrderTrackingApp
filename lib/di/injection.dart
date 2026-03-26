@@ -17,6 +17,7 @@ import '../features/chef/data/datasources/chef_remote_datasource.dart';
 import '../features/chef/data/repositories/chef_repository_impl.dart';
 import '../features/chef/domain/repositories/chef_repository.dart';
 import '../features/chef/domain/usecases/get_available_chefs_usecase.dart';
+import '../features/kitchen/presentation/cubit/chef_cooking_board_cubit.dart';
 import '../features/kitchen/presentation/cubit/head_chef_board_cubit.dart';
 import '../features/orders/data/datasources/orders_remote_datasource.dart';
 import '../features/orders/data/repositories/orders_repository_impl.dart';
@@ -32,6 +33,7 @@ import '../features/waiter/data/repositories/table_repository_impl.dart';
 import '../features/waiter/domain/repositories/table_repository.dart';
 import '../features/waiter/domain/usecases/create_order_usecase.dart';
 import '../features/waiter/domain/usecases/get_areas_usecase.dart';
+import '../features/waiter/domain/usecases/get_order_items_by_account_usecase.dart';
 import '../features/waiter/domain/usecases/get_order_items_by_status_usecase.dart';
 import '../features/waiter/domain/usecases/get_table_detail_usecase.dart';
 import '../features/waiter/domain/usecases/get_tables_usecase.dart';
@@ -104,9 +106,14 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => GetTablesUseCase(sl<TableRepository>()));
   sl.registerLazySingleton(() => GetTableDetailUseCase(sl<TableRepository>()));
   sl.registerLazySingleton(() => CreateOrderUseCase(sl<TableRepository>()));
-  sl.registerLazySingleton(() => UpdateTableStatusUseCase(sl<TableRepository>()));
+  sl.registerLazySingleton(
+    () => UpdateTableStatusUseCase(sl<TableRepository>()),
+  );
   sl.registerLazySingleton(
     () => GetOrderItemsByStatusUseCase(sl<TableRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => GetOrderItemsByAccountUseCase(sl<TableRepository>()),
   );
   sl.registerLazySingleton(
     () => UpdateOrderItemsStatusUseCase(sl<TableRepository>()),
@@ -149,7 +156,9 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<ChefRepository>(
     () => ChefRepositoryImpl(remoteDataSource: sl<ChefRemoteDataSource>()),
   );
-  sl.registerLazySingleton(() => GetAvailableChefsUseCase(sl<ChefRepository>()));
+  sl.registerLazySingleton(
+    () => GetAvailableChefsUseCase(sl<ChefRepository>()),
+  );
 
   // ─── Kitchen: Cubit (HeadChef board) ─────────────────────────────────────
   sl.registerFactory(
@@ -157,6 +166,12 @@ Future<void> initDependencies() async {
       getOrderItemsByStatusUseCase: sl<GetOrderItemsByStatusUseCase>(),
       updateOrderItemsStatusUseCase: sl<UpdateOrderItemsStatusUseCase>(),
       getAvailableChefsUseCase: sl<GetAvailableChefsUseCase>(),
+    ),
+  );
+  sl.registerFactory(
+    () => ChefCookingBoardCubit(
+      getOrderItemsByAccountUseCase: sl<GetOrderItemsByAccountUseCase>(),
+      updateOrderItemsStatusUseCase: sl<UpdateOrderItemsStatusUseCase>(),
     ),
   );
 

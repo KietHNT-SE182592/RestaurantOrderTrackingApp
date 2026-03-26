@@ -32,6 +32,9 @@ abstract class TableRepository {
   /// Lấy danh sách order item theo trạng thái (API status code).
   Future<List<ServeItemEntity>> getOrderItemsByStatus({required int status});
 
+  /// Lấy danh sách order item theo đầu bếp hiện tại (dựa trên token).
+  Future<List<ServeItemEntity>> getOrderItemsByAccount();
+
   /// Cập nhật trạng thái hàng loạt cho nhiều order item.
   Future<String> updateOrderItemsStatus({
     required List<String> orderItemIds,

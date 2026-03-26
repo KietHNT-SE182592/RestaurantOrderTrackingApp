@@ -31,7 +31,7 @@ class ServeItemModel extends ServeItemEntity {
 
   factory ServeItemModel.fromJson(Map<String, dynamic> json) {
     return ServeItemModel(
-      id: json['id'] as String? ?? '',
+      id: (json['id'] ?? json['orderItemId']) as String? ?? '',
       orderId: json['orderId'] as String? ?? '',
       tableId: json['tableId'] as String? ?? '',
       tableNumber: json['tableNumber'] as String? ?? '',
@@ -47,7 +47,7 @@ class ServeItemModel extends ServeItemEntity {
       orderChannel: json['orderChannel'] as String?,
       note: json['note'] as String?,
       status: OrderItemStatus.fromApi(json['status']),
-      createdAt: _parseDate(json['createdAt']),
+      createdAt: _parseDate(json['createdAt'] ?? json['orderAt']),
       updatedAt: _parseDate(json['updatedAt']),
     );
   }

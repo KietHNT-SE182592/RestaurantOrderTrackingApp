@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../di/injection.dart';
+import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../chef/domain/entities/chef_member_entity.dart';
 import '../../../waiter/domain/entities/serve_item_entity.dart';
+import '../cubit/chef_cooking_board_cubit.dart';
 import '../cubit/head_chef_board_cubit.dart';
 
 enum _ChefPopupFilter { all, asian, european }
@@ -14,15 +16,25 @@ class KitchenDisplayPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.read<AuthCubit>().state;
+    final role = authState is AuthSuccess ? authState.user.role : '';
+
+    if (role == 'Chef') {
+      return BlocProvider(
+        create: (_) => sl<ChefCookingBoardCubit>()..load(),
+        child: const _ChefCookingView(),
+      );
+    }
+
     return BlocProvider(
       create: (_) => sl<HeadChefBoardCubit>()..load(),
-      child: const _KitchenDisplayView(),
+      child: const _HeadChefDisplayView(),
     );
   }
 }
 
-class _KitchenDisplayView extends StatelessWidget {
-  const _KitchenDisplayView();
+class _HeadChefDisplayView extends StatelessWidget {
+  const _HeadChefDisplayView();
 
   String _specialtyLabel(ChefMemberEntity chef) {
     if (chef.isAsianSpecialty) return 'Chuyên món Á';
@@ -543,6 +555,331 @@ class _ReadOnlyItemCard extends StatelessWidget {
             Text('Ghi chú: ${item.note}'),
           ] else
             const Text('Ghi chú: Không có'),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChefCookingView extends StatelessWidget {
+  const _ChefCookingView();
+
+  String _formatTime(DateTime? input) {
+    if (input == null) return '--:--';
+    final local = input.toLocal();
+    final h = local.hour.toString().padLeft(2, '0');
+    final m = local.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  Future<void> _finishOne(BuildContext context, ChefDishGroup group) async {
+    try {
+      await context.read<ChefCookingBoardCubit>().finishOneItem(group);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã chuyển 1 món sang sẵn sàng phục vụ.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Không thể cập nhật: $e')));
+    }
+  }
+
+  Future<void> _finishAll(BuildContext context, ChefDishGroup group) async {
+    try {
+      await context.read<ChefCookingBoardCubit>().finishAllItems(group);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã chuyển tất cả món sang sẵn sàng phục vụ.'),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Không thể cập nhật: $e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.backgroundLight,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.foregroundLight,
+        title: const Text(
+          'KDS Bếp - Chef',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Làm mới',
+            onPressed: () => context.read<ChefCookingBoardCubit>().refresh(),
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: BlocBuilder<ChefCookingBoardCubit, ChefCookingBoardState>(
+          builder: (context, state) {
+            if (state is ChefCookingBoardInitial ||
+                state is ChefCookingBoardLoading) {
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              );
+            }
+
+            if (state is ChefCookingBoardError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        color: AppColors.destructive,
+                        size: 42,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        state.message,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton.tonal(
+                        onPressed: () =>
+                            context.read<ChefCookingBoardCubit>().load(),
+                        child: const Text('Thử lại'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            final data = state as ChefCookingBoardLoaded;
+
+            return RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: () => context.read<ChefCookingBoardCubit>().refresh(),
+              child: data.groups.isEmpty
+                  ? ListView(
+                      padding: const EdgeInsets.all(24),
+                      children: const [
+                        SizedBox(height: 120),
+                        Icon(
+                          Icons.ramen_dining_outlined,
+                          size: 52,
+                          color: AppColors.mutedForeground,
+                        ),
+                        SizedBox(height: 10),
+                        Center(
+                          child: Text(
+                            'Hiện không có món nào đang nấu.',
+                            style: TextStyle(color: AppColors.mutedForeground),
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+                      itemCount: data.groups.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final group = data.groups[index];
+                        final isProcessing = data.isGroupProcessing(group);
+
+                        return _ChefDishGroupCard(
+                          group: group,
+                          isProcessing: isProcessing,
+                          onFinishOne: () => _finishOne(context, group),
+                          onFinishAll: () => _finishAll(context, group),
+                          formatTime: _formatTime,
+                        );
+                      },
+                    ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ChefDishGroupCard extends StatefulWidget {
+  final ChefDishGroup group;
+  final bool isProcessing;
+  final VoidCallback onFinishOne;
+  final VoidCallback onFinishAll;
+  final String Function(DateTime? input) formatTime;
+
+  const _ChefDishGroupCard({
+    required this.group,
+    required this.isProcessing,
+    required this.onFinishOne,
+    required this.onFinishAll,
+    required this.formatTime,
+  });
+
+  @override
+  State<_ChefDishGroupCard> createState() => _ChefDishGroupCardState();
+}
+
+class _ChefDishGroupCardState extends State<_ChefDishGroupCard> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isSingleItem = widget.group.quantity <= 1;
+    final singleItem = isSingleItem ? widget.group.oldestItem : null;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: isSingleItem
+                ? CrossAxisAlignment.center
+                : CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(top: isSingleItem ? 0 : 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.group.productName,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Số lượng: ${widget.group.quantity}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.mutedForeground,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (isSingleItem)
+                SizedBox(
+                  height: 34,
+                  child: FilledButton(
+                    onPressed: widget.isProcessing ? null : widget.onFinishOne,
+                    child: widget.isProcessing
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Xong'),
+                  ),
+                )
+              else
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    SizedBox(
+                      height: 34,
+                      child: OutlinedButton(
+                        onPressed: widget.isProcessing
+                            ? null
+                            : widget.onFinishOne,
+                        child: const Text('Xong 1 phần'),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 34,
+                      child: FilledButton(
+                        onPressed: widget.isProcessing
+                            ? null
+                            : widget.onFinishAll,
+                        child: widget.isProcessing
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Xong tất cả'),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: _expanded ? 'Thu gọn chi tiết' : 'Xem chi tiết',
+                      onPressed: () => setState(() => _expanded = !_expanded),
+                      icon: Icon(
+                        _expanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          if (isSingleItem && singleItem != null) ...[
+            const SizedBox(height: 8),
+            Text('Bàn: ${singleItem.tableNumber}'),
+            Text('Khu vực: ${singleItem.areaName}'),
+            Text('Giờ vào bếp: ${widget.formatTime(singleItem.createdAt)}'),
+            if (singleItem.note?.trim().isNotEmpty == true)
+              Text('Ghi chú: ${singleItem.note}')
+            else
+              const Text('Ghi chú: Không có'),
+          ],
+          if (_expanded) ...[
+            const SizedBox(height: 8),
+            ...widget.group.items.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Bàn: ${item.tableNumber}'),
+                      Text('Khu vực: ${item.areaName}'),
+                      Text('Giờ vào bếp: ${widget.formatTime(item.createdAt)}'),
+                      if (item.note?.trim().isNotEmpty == true)
+                        Text('Ghi chú: ${item.note}')
+                      else
+                        const Text('Ghi chú: Không có'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -89,6 +89,15 @@ class TableRepositoryImpl implements TableRepository {
   }
 
   @override
+  Future<List<ServeItemEntity>> getOrderItemsByAccount() async {
+    try {
+      return await remoteDataSource.getOrderItemsByAccount();
+    } on ServerException catch (e) {
+      throw ServerFailure(e.message);
+    }
+  }
+
+  @override
   Future<String> updateOrderItemsStatus({
     required List<String> orderItemIds,
     required int newStatus,
