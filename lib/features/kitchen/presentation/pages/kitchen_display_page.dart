@@ -56,6 +56,21 @@ class _HeadChefDisplayView extends StatelessWidget {
     }
   }
 
+  Future<void> _confirmItem(BuildContext context, String orderItemId) async {
+    try {
+      await context.read<HeadChefBoardCubit>().confirmOrderItem(orderItemId);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Đã xác nhận món.')));
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Không thể xác nhận: $e')));
+    }
+  }
+
   Future<void> _assignItem(BuildContext context, String orderItemId) async {
     try {
       await context.read<HeadChefBoardCubit>().assignOrderItem(orderItemId);
@@ -152,14 +167,25 @@ class _HeadChefDisplayView extends StatelessWidget {
                           separatorBuilder: (_, _) => const Divider(height: 1),
                           itemBuilder: (context, index) {
                             final chef = filteredChefs[index];
-                            return RadioListTile<String>(
+                            final isSelected =
+                                currentSelected == chef.accountId;
+                            return ListTile(
                               dense: true,
-                              value: chef.accountId,
-                              groupValue: currentSelected,
-                              onChanged: (value) =>
-                                  setState(() => currentSelected = value),
+                              contentPadding: EdgeInsets.zero,
+                              selected: isSelected,
+                              onTap: () => setState(
+                                () => currentSelected = chef.accountId,
+                              ),
                               title: Text(chef.fullName),
                               subtitle: Text(_specialtyLabel(chef)),
+                              trailing: Icon(
+                                isSelected
+                                    ? Icons.radio_button_checked_rounded
+                                    : Icons.radio_button_unchecked_rounded,
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : AppColors.mutedForeground,
+                              ),
                             );
                           },
                         ),
@@ -273,13 +299,29 @@ class _HeadChefDisplayView extends StatelessWidget {
                               icon: Icons.hourglass_top_rounded,
                               items: data.pendingItems,
                               childBuilder: (item) {
-                                final selectedAssignee =
-                                    data.selectedAssigneesByOrderItem[item.id];
                                 return _PendingItemCard(
                                   item: item,
-                                  chefs: data.availableChefs,
+                                  isProcessing: data.processingItemIds.contains(
+                                    item.id,
+                                  ),
+                                  onConfirm: () =>
+                                      _confirmItem(context, item.id),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 10),
+                            _StatusColumn(
+                              title: 'Đã xác nhận',
+                              color: const Color(0xFF0F766E),
+                              icon: Icons.task_alt_rounded,
+                              items: data.confirmedItems,
+                              childBuilder: (item) {
+                                final selectedAssignee =
+                                    data.selectedAssigneesByOrderItem[item.id];
+                                return _ConfirmedItemCard(
+                                  item: item,
                                   selectedAssigneeId: selectedAssignee,
-                                  isAssigning: data.assigningItemIds.contains(
+                                  isProcessing: data.processingItemIds.contains(
                                     item.id,
                                   ),
                                   onTap: () => _showAssignChefDialog(
@@ -287,9 +329,8 @@ class _HeadChefDisplayView extends StatelessWidget {
                                     item: item,
                                     chefs: data.availableChefs,
                                     selectedAssigneeId: selectedAssignee,
-                                    isAssigning: data.assigningItemIds.contains(
-                                      item.id,
-                                    ),
+                                    isAssigning: data.processingItemIds
+                                        .contains(item.id),
                                   ),
                                 );
                               },
@@ -327,21 +368,37 @@ class _HeadChefDisplayView extends StatelessWidget {
                                 icon: Icons.hourglass_top_rounded,
                                 items: data.pendingItems,
                                 childBuilder: (item) {
-                                  final selectedAssignee = data
-                                      .selectedAssigneesByOrderItem[item.id];
                                   return _PendingItemCard(
                                     item: item,
-                                    chefs: data.availableChefs,
+                                    isProcessing: data.processingItemIds
+                                        .contains(item.id),
+                                    onConfirm: () =>
+                                        _confirmItem(context, item.id),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _StatusColumn(
+                                title: 'Đã xác nhận',
+                                color: const Color(0xFF0F766E),
+                                icon: Icons.task_alt_rounded,
+                                items: data.confirmedItems,
+                                childBuilder: (item) {
+                                  final selectedAssignee = data
+                                      .selectedAssigneesByOrderItem[item.id];
+                                  return _ConfirmedItemCard(
+                                    item: item,
                                     selectedAssigneeId: selectedAssignee,
-                                    isAssigning: data.assigningItemIds.contains(
-                                      item.id,
-                                    ),
+                                    isProcessing: data.processingItemIds
+                                        .contains(item.id),
                                     onTap: () => _showAssignChefDialog(
                                       context,
                                       item: item,
                                       chefs: data.availableChefs,
                                       selectedAssigneeId: selectedAssignee,
-                                      isAssigning: data.assigningItemIds
+                                      isAssigning: data.processingItemIds
                                           .contains(item.id),
                                     ),
                                   );
@@ -450,17 +507,13 @@ class _StatusColumn extends StatelessWidget {
 
 class _PendingItemCard extends StatelessWidget {
   final ServeItemEntity item;
-  final List<ChefMemberEntity> chefs;
-  final String? selectedAssigneeId;
-  final bool isAssigning;
-  final VoidCallback onTap;
+  final bool isProcessing;
+  final VoidCallback onConfirm;
 
   const _PendingItemCard({
     required this.item,
-    required this.chefs,
-    required this.selectedAssigneeId,
-    required this.isAssigning,
-    required this.onTap,
+    required this.isProcessing,
+    required this.onConfirm,
   });
 
   @override
@@ -468,14 +521,78 @@ class _PendingItemCard extends StatelessWidget {
     return Material(
       color: const Color(0xFFFFFBEB),
       borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFDE68A)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              item.productName,
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 6),
+            Text('Bàn: ${item.tableNumber}'),
+            Text('Khu vực: ${item.areaName}'),
+            if (item.note?.trim().isNotEmpty == true)
+              Text('Ghi chú: ${item.note}')
+            else
+              const Text('Ghi chú: Không có'),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: isProcessing ? null : onConfirm,
+                child: isProcessing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Xác nhận món'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ConfirmedItemCard extends StatelessWidget {
+  final ServeItemEntity item;
+  final String? selectedAssigneeId;
+  final bool isProcessing;
+  final VoidCallback onTap;
+
+  const _ConfirmedItemCard({
+    required this.item,
+    required this.selectedAssigneeId,
+    required this.isProcessing,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFF0FDFA),
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
-        onTap: isAssigning ? null : onTap,
+        onTap: isProcessing ? null : onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFFDE68A)),
+            border: Border.all(color: const Color(0xFF99F6E4)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -499,7 +616,7 @@ class _PendingItemCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       selectedAssigneeId == null
-                          ? 'Nhấn để chọn đầu bếp'
+                          ? 'Nhấn để chọn đầu bếp và bắt đầu nấu'
                           : 'Nhấn để đổi đầu bếp',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.mutedForeground,
@@ -507,7 +624,7 @@ class _PendingItemCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (isAssigning)
+                  if (isProcessing)
                     const SizedBox(
                       width: 16,
                       height: 16,

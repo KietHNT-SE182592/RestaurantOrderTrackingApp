@@ -15,37 +15,41 @@ class HeadChefBoardLoading extends HeadChefBoardState {}
 
 class HeadChefBoardLoaded extends HeadChefBoardState {
   final List<ServeItemEntity> pendingItems;
+  final List<ServeItemEntity> confirmedItems;
   final List<ServeItemEntity> cookingItems;
   final List<ServeItemEntity> readyItems;
   final List<ChefMemberEntity> availableChefs;
   final Map<String, String> selectedAssigneesByOrderItem;
-  final Set<String> assigningItemIds;
+  final Set<String> processingItemIds;
 
   HeadChefBoardLoaded({
     required this.pendingItems,
+    required this.confirmedItems,
     required this.cookingItems,
     required this.readyItems,
     required this.availableChefs,
     required this.selectedAssigneesByOrderItem,
-    required this.assigningItemIds,
+    required this.processingItemIds,
   });
 
   HeadChefBoardLoaded copyWith({
     List<ServeItemEntity>? pendingItems,
+    List<ServeItemEntity>? confirmedItems,
     List<ServeItemEntity>? cookingItems,
     List<ServeItemEntity>? readyItems,
     List<ChefMemberEntity>? availableChefs,
     Map<String, String>? selectedAssigneesByOrderItem,
-    Set<String>? assigningItemIds,
+    Set<String>? processingItemIds,
   }) {
     return HeadChefBoardLoaded(
       pendingItems: pendingItems ?? this.pendingItems,
+      confirmedItems: confirmedItems ?? this.confirmedItems,
       cookingItems: cookingItems ?? this.cookingItems,
       readyItems: readyItems ?? this.readyItems,
       availableChefs: availableChefs ?? this.availableChefs,
       selectedAssigneesByOrderItem:
           selectedAssigneesByOrderItem ?? this.selectedAssigneesByOrderItem,
-      assigningItemIds: assigningItemIds ?? this.assigningItemIds,
+      processingItemIds: processingItemIds ?? this.processingItemIds,
     );
   }
 }
@@ -62,6 +66,7 @@ class HeadChefBoardCubit extends Cubit<HeadChefBoardState> {
   final GetAvailableChefsUseCase _getAvailableChefsUseCase;
 
   static const int _pendingStatus = 0;
+  static const int _confirmedStatus = 1;
   static const int _cookingStatus = 2;
   static const int _readyStatus = 3;
 
@@ -85,23 +90,25 @@ class HeadChefBoardCubit extends Cubit<HeadChefBoardState> {
     try {
       final results = await Future.wait([
         _getOrderItemsByStatusUseCase(_pendingStatus),
+        _getOrderItemsByStatusUseCase(_confirmedStatus),
         _getOrderItemsByStatusUseCase(_cookingStatus),
         _getOrderItemsByStatusUseCase(_readyStatus),
         _getAvailableChefsUseCase(),
       ]);
 
       final pendingItems = (results[0] as List).cast<ServeItemEntity>();
-      final cookingItems = (results[1] as List).cast<ServeItemEntity>();
-      final readyItems = (results[2] as List).cast<ServeItemEntity>();
-      final availableChefs = (results[3] as List).cast<ChefMemberEntity>();
+      final confirmedItems = (results[1] as List).cast<ServeItemEntity>();
+      final cookingItems = (results[2] as List).cast<ServeItemEntity>();
+      final readyItems = (results[3] as List).cast<ServeItemEntity>();
+      final availableChefs = (results[4] as List).cast<ChefMemberEntity>();
 
       final availableChefIds = availableChefs
           .map((chef) => chef.accountId)
           .toSet();
-      final pendingIds = pendingItems.map((item) => item.id).toSet();
+      final confirmedIds = confirmedItems.map((item) => item.id).toSet();
       final nextSelection = <String, String>{};
       for (final entry in previousSelection.entries) {
-        if (pendingIds.contains(entry.key) &&
+        if (confirmedIds.contains(entry.key) &&
             availableChefIds.contains(entry.value)) {
           nextSelection[entry.key] = entry.value;
         }
@@ -110,11 +117,12 @@ class HeadChefBoardCubit extends Cubit<HeadChefBoardState> {
       emit(
         HeadChefBoardLoaded(
           pendingItems: pendingItems,
+          confirmedItems: confirmedItems,
           cookingItems: cookingItems,
           readyItems: readyItems,
           availableChefs: availableChefs,
           selectedAssigneesByOrderItem: nextSelection,
-          assigningItemIds: <String>{},
+          processingItemIds: <String>{},
         ),
       );
     } on ServerFailure catch (e) {
@@ -132,7 +140,7 @@ class HeadChefBoardCubit extends Cubit<HeadChefBoardState> {
   }) {
     final current = state;
     if (current is! HeadChefBoardLoaded ||
-        current.assigningItemIds.contains(orderItemId)) {
+        current.processingItemIds.contains(orderItemId)) {
       return;
     }
 
@@ -141,20 +149,50 @@ class HeadChefBoardCubit extends Cubit<HeadChefBoardState> {
     emit(current.copyWith(selectedAssigneesByOrderItem: next));
   }
 
+  Future<void> confirmOrderItem(String orderItemId) async {
+    final current = state;
+    if (current is! HeadChefBoardLoaded) return;
+
+    if (current.processingItemIds.contains(orderItemId)) return;
+
+    emit(
+      current.copyWith(
+        processingItemIds: <String>{...current.processingItemIds, orderItemId},
+      ),
+    );
+
+    try {
+      await _updateOrderItemsStatusUseCase(
+        orderItemIds: [orderItemId],
+        newStatus: _confirmedStatus,
+        accountId: null,
+        changeSource: '',
+        assigneeId: null,
+      );
+      await load(keepSelections: true);
+    } on ServerFailure {
+      _clearProcessingState(orderItemId);
+      rethrow;
+    } catch (_) {
+      _clearProcessingState(orderItemId);
+      rethrow;
+    }
+  }
+
   Future<void> assignOrderItem(String orderItemId) async {
     final current = state;
     if (current is! HeadChefBoardLoaded) return;
 
     final assigneeId = current.selectedAssigneesByOrderItem[orderItemId];
     if (assigneeId == null || assigneeId.isEmpty) {
-      throw StateError('Vui lòng chọn đầu bếp trước khi xác nhận.');
+      throw StateError('Vui lòng chọn đầu bếp trước khi phân công.');
     }
 
-    if (current.assigningItemIds.contains(orderItemId)) return;
+    if (current.processingItemIds.contains(orderItemId)) return;
 
     emit(
       current.copyWith(
-        assigningItemIds: <String>{...current.assigningItemIds, orderItemId},
+        processingItemIds: <String>{...current.processingItemIds, orderItemId},
       ),
     );
 
@@ -168,19 +206,19 @@ class HeadChefBoardCubit extends Cubit<HeadChefBoardState> {
       );
       await load(keepSelections: true);
     } on ServerFailure {
-      _clearAssigningState(orderItemId);
+      _clearProcessingState(orderItemId);
       rethrow;
     } catch (_) {
-      _clearAssigningState(orderItemId);
+      _clearProcessingState(orderItemId);
       rethrow;
     }
   }
 
-  void _clearAssigningState(String orderItemId) {
+  void _clearProcessingState(String orderItemId) {
     final current = state;
     if (current is! HeadChefBoardLoaded) return;
-    final nextAssigning = Set<String>.from(current.assigningItemIds)
+    final nextProcessing = Set<String>.from(current.processingItemIds)
       ..remove(orderItemId);
-    emit(current.copyWith(assigningItemIds: nextAssigning));
+    emit(current.copyWith(processingItemIds: nextProcessing));
   }
 }
